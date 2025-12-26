@@ -57,6 +57,20 @@ class ActivityResource extends Resource
 
                         RichEditor::make('description')
                             ->label('活動描述')
+                            ->toolbarButtons([
+                                'bold',
+                                'italic',
+                                'underline',
+                                'strike',
+                                'h2',
+                                'h3',
+                                'bulletList',
+                                'orderedList',
+                                'blockquote',
+                                'link',
+                                'redo',
+                                'undo',
+                            ])
                             ->columnSpanFull(),
 
                         FileUpload::make('cover_image')
@@ -67,6 +81,7 @@ class ActivityResource extends Resource
                             ->directory('activities')
                             ->visibility('public')
                             ->previewable(true)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                             ->maxSize(5120),
                     ]),
 
@@ -177,7 +192,7 @@ class ActivityResource extends Resource
                     ->icon('heroicon-o-arrow-up-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (Activity $record) => $record->status === 'draft')
+                    ->visible(fn (Activity $record) => $record->status === 'draft' && $record->admin_id === Auth::id())
                     ->action(fn (Activity $record) => $record->update(['status' => 'published'])),
             ])
             ->bulkActions([

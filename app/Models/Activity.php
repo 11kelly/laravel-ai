@@ -139,5 +139,31 @@ class Activity extends Model
 
         return asset('storage/' . $this->cover_image);
     }
+
+    /**
+     * Get sanitized description (XSS protection).
+     * Only allow safe HTML tags from RichEditor.
+     */
+    public function getSafeDescriptionAttribute(): ?string
+    {
+        if (! $this->description) {
+            return null;
+        }
+
+        // Allow only safe HTML tags
+        $allowedTags = '<p><br><strong><b><em><i><u><s><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><a><img>';
+
+        $cleaned = strip_tags($this->description, $allowedTags);
+
+        // Remove any javascript: or data: URLs from href and src attributes
+        $cleaned = preg_replace('/href\s*=\s*["\']?\s*(javascript|data):/i', 'href="#blocked:', $cleaned);
+        $cleaned = preg_replace('/src\s*=\s*["\']?\s*(javascript|data):/i', 'src="#blocked:', $cleaned);
+
+        // Remove on* event handlers
+        $cleaned = preg_replace('/\s+on\w+\s*=\s*["\'][^"\']*["\']/i', '', $cleaned);
+        $cleaned = preg_replace('/\s+on\w+\s*=\s*[^\s>]*/i', '', $cleaned);
+
+        return $cleaned;
+    }
 }
 

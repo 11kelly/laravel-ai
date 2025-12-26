@@ -117,7 +117,7 @@
                                     <h3 class="text-xl font-bold text-gray-800 m-0">活動說明</h3>
                                 </div>
                                 <div class="text-gray-600 leading-relaxed bg-gray-50 rounded-2xl p-6 border border-gray-100 prose prose-sm prose-red max-w-none">
-                                    {!! $activity->description !!}
+                                    {!! $activity->safe_description !!}
                                 </div>
                             </div>
                         @endif

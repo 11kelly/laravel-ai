@@ -122,9 +122,10 @@ class ReservationService
                 'cancelled_at' => now(),
             ]);
 
-            // Decrement reserved count
+            // Decrement reserved count (only if > 0 to prevent underflow)
             Activity::query()
                 ->where('id', $lockedReservation->activity_id)
+                ->where('reserved_count', '>', 0)
                 ->decrement('reserved_count');
 
             // Log audit event
