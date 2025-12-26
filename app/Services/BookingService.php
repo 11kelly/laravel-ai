@@ -24,9 +24,16 @@ class BookingService
     public function createBooking(User $user, Event $event, ?string $notes = null): Booking
     {
         return DB::transaction(function () use ($user, $event, $notes) {
-            // Check if user already has a booking for this event
+            // Lock the event record to prevent race conditions
+            $event = Event::where('id', $event->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Check if user already has a booking for this event (with lock to prevent race conditions)
+            // Note: Database unique constraint (user_id, event_id) also prevents duplicates
             $existingBooking = Booking::where('user_id', $user->id)
                 ->where('event_id', $event->id)
+                ->lockForUpdate()
                 ->first();
 
             if ($existingBooking) {
@@ -38,7 +45,7 @@ class BookingService
                 throw new \Exception('此活动尚未发布');
             }
 
-            // Check if event has available slots
+            // Check if event has available slots (re-check after lock)
             if ($event->isFull()) {
                 throw new \Exception('活动名额已满');
             }
@@ -71,13 +78,23 @@ class BookingService
     public function cancelBooking(Booking $booking): bool
     {
         return DB::transaction(function () use ($booking) {
-            // Check if booking is already cancelled
+            // Lock the booking record to prevent race conditions
+            $booking = Booking::where('id', $booking->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Check if booking is already cancelled (re-check after lock)
             if ($booking->isCancelled()) {
                 throw new \Exception('预约已取消');
             }
 
+            // Lock the event record to prevent race conditions
+            $event = Event::where('id', $booking->event_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             // Check if event has started
-            if ($booking->event->start_time <= now()) {
+            if ($event->start_time <= now()) {
                 throw new \Exception('活动已开始，无法取消预约');
             }
 
@@ -87,8 +104,8 @@ class BookingService
                 'cancelled_at' => now(),
             ]);
 
-            // Decrement booked_count atomically
-            $booking->event->decrement('booked_count');
+            // Decrement booked_count atomically (only if booking was not cancelled)
+            $event->decrement('booked_count');
 
             return true;
         });
@@ -96,18 +113,29 @@ class BookingService
 
     /**
      * Confirm a booking.
+     *
+     * @throws \Exception
      */
     public function confirmBooking(Booking $booking): bool
     {
-        if ($booking->isCancelled()) {
-            throw new \Exception('无法确认已取消的预约');
-        }
+        return DB::transaction(function () use ($booking) {
+            // Lock the booking record to prevent race conditions
+            $booking = Booking::where('id', $booking->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $booking->update([
-            'status' => Booking::STATUS_CONFIRMED,
-        ]);
+            // Check if booking is already cancelled (re-check after lock)
+            if ($booking->isCancelled()) {
+                throw new \Exception('无法确认已取消的预约');
+            }
 
-        return true;
+            // Update booking status
+            $booking->update([
+                'status' => Booking::STATUS_CONFIRMED,
+            ]);
+
+            return true;
+        });
     }
 }
 

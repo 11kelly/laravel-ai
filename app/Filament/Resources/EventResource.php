@@ -78,7 +78,7 @@ class EventResource extends Resource
                             ->image()
                             ->disk('public')
                             ->directory('events')
-                            ->maxSize(10240)
+                            ->maxSize(5120)
                             ->imageEditor()
                             ->columnSpanFull(),
                     ])->columns(2),

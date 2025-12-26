@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\Booking;
 use App\Models\Event;
 use App\Services\BookingService;
 use Illuminate\Http\RedirectResponse;
@@ -52,11 +53,15 @@ class BookingController extends Controller
     /**
      * Cancel the specified booking.
      */
-    public function cancel(Request $request, int $id): RedirectResponse
+    public function cancel(Request $request, Booking $booking): RedirectResponse
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $booking = $user->bookings()->findOrFail($id);
+
+        // Ensure the booking belongs to the authenticated user
+        if ($booking->user_id !== $user->id) {
+            abort(403, '无权访问此预约');
+        }
 
         try {
             $this->bookingService->cancelBooking($booking);
@@ -74,9 +79,9 @@ class BookingController extends Controller
     /**
      * Handle DELETE request for cancel booking.
      */
-    public function destroy(Request $request, int $id): RedirectResponse
+    public function destroy(Request $request, Booking $booking): RedirectResponse
     {
-        return $this->cancel($request, $id);
+        return $this->cancel($request, $booking);
     }
 }
 

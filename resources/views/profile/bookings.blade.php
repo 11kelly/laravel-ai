@@ -50,7 +50,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     @if(!$booking->isCancelled() && $booking->event->start_time > now())
-                                        <form method="POST" action="{{ route('bookings.cancel', $booking->id) }}" class="inline" onsubmit="return confirm('确定要取消预约吗？');">
+                                        <form method="POST" action="{{ route('bookings.cancel', $booking) }}" class="inline" onsubmit="return confirm('确定要取消预约吗？');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">取消预约</button>

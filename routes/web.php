@@ -24,7 +24,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 
 // 预约路由（需要登录）
 Route::post('/events/{event}/book', [BookingController::class, 'store'])->name('bookings.store')->middleware('auth');
-Route::delete('/bookings/{id}/cancel', [BookingController::class, 'destroy'])->name('bookings.cancel')->middleware('auth');
+Route::delete('/bookings/{booking}/cancel', [BookingController::class, 'destroy'])->name('bookings.cancel')->middleware('auth');
 
 // 个人中心路由（需要登录）
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index')->middleware('auth');
