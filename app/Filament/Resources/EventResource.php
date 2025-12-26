@@ -95,8 +95,12 @@ class EventResource extends Resource
                             ->image()
                             ->disk('public')
                             ->directory('events')
+                            ->visibility('public')
                             ->maxSize(5120)
-                            ->imageEditor(),
+                            ->imageEditor()
+                            ->previewable()
+                            ->downloadable()
+                            ->openable(),
                     ]),
 
                 Section::make('Organizer Information')

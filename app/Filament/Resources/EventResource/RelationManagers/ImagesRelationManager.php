@@ -48,6 +48,7 @@ class ImagesRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Image')
+                    ->getStateUsing(fn ($record) => $record->full_url)
                     ->url(fn ($record) => $record->full_url)
                     ->square()
                     ->size(80),
