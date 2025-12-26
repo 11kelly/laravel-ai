@@ -27,8 +27,8 @@ Route::get('/activities/{activity:slug}', [ActivityController::class, 'show'])->
 // 认证路由
 require __DIR__.'/auth.php';
 
-// 需要登录的路由
-Route::middleware('auth')->group(function () {
+// 需要登录的路由（使用 web guard）
+Route::middleware('auth:web')->group(function () {
     // 预约（添加速率限制：10次/分钟/用户）
     Route::post('/bookings', [BookingController::class, 'store'])
         ->middleware('throttle:10,1')

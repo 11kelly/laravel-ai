@@ -158,7 +158,11 @@ class ActivityResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image')
                     ->label('封面')
-                    ->circular(),
+                    ->getStateUsing(fn (Activity $record): ?string => $record->cover_image 
+                        ? asset('storage/' . $record->cover_image)
+                        : null)
+                    ->circular()
+                    ->defaultImageUrl(url('/images/placeholder-activity.svg')),
 
                 Tables\Columns\TextColumn::make('title')
                     ->label('标题')

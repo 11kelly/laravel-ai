@@ -21,7 +21,7 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:5,1');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth:web')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
 

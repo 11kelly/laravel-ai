@@ -5,10 +5,20 @@
 
 # 活动预约系统 - 技术设计文档 (TSD)
 
-**文档版本**: 1.0.0  
+**文档版本**: 1.1.0  
 **创建日期**: 2025-12-26  
+**最后更新**: 2025-12-26  
 **技术栈**: Laravel 12.x + Filament 4.0 + PHP 8.2+  
-**文档状态**: 初稿
+**文档状态**: 已实现
+
+---
+
+## 版本历史
+
+| 版本 | 日期 | 修改内容 | 修改人 |
+|-----|------|----------|--------|
+| 1.0.0 | 2025-12-26 | 初稿 | AI Assistant |
+| 1.1.0 | 2025-12-26 | 更新实现细节、新增用户管理模块、修正路由定义 | AI Assistant |
 
 ---
 
@@ -24,8 +34,8 @@
 ### 1.2 本需求明确解决的问题
 
 1. **前台用户端**：提供活动浏览、详情查看、在线预约功能，支持用户注册与登录
-2. **个人中心**：用户可管理个人预约记录、编辑个人资料
-3. **管理后台**：管理员可发布/编辑/删除活动、管理用户预约、上传活动图片
+2. **个人中心**：用户可管理个人预约记录、编辑个人资料、修改密码
+3. **管理后台**：管理员可发布/编辑/删除活动、管理用户预约、管理用户账号、上传活动图片
 
 ### 1.3 架构目标
 
@@ -49,14 +59,17 @@
 
 ## 2. 核心接口定义 (API / Service Contracts)
 
-### 2.1 前台公开接口
+### 2.1 前台公开路由
 
-#### 2.1.1 活动列表接口
+> **实现说明**：本系统采用传统的 Web 路由而非 API 路由，使用 Blade 模板渲染页面，配合 Alpine.js 实现交互。
+
+#### 2.1.1 活动列表页面
 
 | 属性 | 说明 |
 |-----|------|
-| **接口名称** | `GET /api/activities` |
-| **职责** | 获取活动列表，支持分页与筛选 |
+| **路由** | `GET /activities` |
+| **控制器** | `ActivityController@index` |
+| **职责** | 显示活动列表页面，支持分页 |
 | **调用方** | 前台 Web 页面 |
 | **被调用方** | `ActivityService` |
 
@@ -65,100 +78,28 @@
 | 参数 | 类型 | 必填 | 校验规则 |
 |-----|------|-----|----------|
 | `page` | integer | 否 | min:1 |
-| `per_page` | integer | 否 | min:1, max:50, 默认 15 |
-| `status` | string | 否 | enum: upcoming, ongoing, ended |
-| `search` | string | 否 | max:100 |
-| `category_id` | integer | 否 | exists:categories,id |
 
-**输出结构**：
-
-```json
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": 1,
-        "title": "string",
-        "description": "string",
-        "cover_image": "string|null",
-        "start_time": "datetime",
-        "end_time": "datetime",
-        "location": "string",
-        "capacity": "integer",
-        "booked_count": "integer",
-        "status": "string"
-      }
-    ],
-    "pagination": {
-      "current_page": 1,
-      "total_pages": 10,
-      "total_items": 150
-    }
-  }
-}
-```
-
-**失败响应**：
-
-| 错误码 | 说明 |
-|-------|------|
-| 422 | 参数校验失败 |
-| 500 | 服务器内部错误 |
-
-**幂等性**: 是（GET 请求）  
-**副作用**: 无
+**输出**：Blade 视图 `activities.index`
 
 ---
 
-#### 2.1.2 活动详情接口
+#### 2.1.2 活动详情页面
 
 | 属性 | 说明 |
 |-----|------|
-| **接口名称** | `GET /api/activities/{id}` |
-| **职责** | 获取单个活动详情 |
-| **调用方** | 前台活动详情页 |
+| **路由** | `GET /activities/{activity:slug}` |
+| **控制器** | `ActivityController@show` |
+| **职责** | 显示单个活动详情页面 |
+| **调用方** | 前台活动列表 |
 | **被调用方** | `ActivityService` |
 
-**输入参数**：
+**路由参数**：
 
 | 参数 | 类型 | 必填 | 校验规则 |
 |-----|------|-----|----------|
-| `id` | integer | 是 | exists:activities,id |
+| `slug` | string | 是 | 使用 Route Model Binding 自动解析 |
 
-**输出结构**：
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "title": "string",
-    "description": "string",
-    "content": "string (HTML)",
-    "cover_image": "string|null",
-    "gallery": ["string"],
-    "start_time": "datetime",
-    "end_time": "datetime",
-    "registration_deadline": "datetime|null",
-    "location": "string",
-    "address": "string|null",
-    "capacity": "integer",
-    "booked_count": "integer",
-    "is_available": "boolean",
-    "status": "string",
-    "organizer": {
-      "name": "string"
-    }
-  }
-}
-```
-
-**失败响应**：
-
-| 错误码 | 说明 |
-|-------|------|
-| 404 | 活动不存在 |
+**输出**：Blade 视图 `activities.show`
 
 ---
 
@@ -166,11 +107,13 @@
 
 | 属性 | 说明 |
 |-----|------|
-| **接口名称** | `POST /api/bookings` |
+| **路由** | `POST /bookings` |
+| **控制器** | `BookingController@store` |
 | **职责** | 用户预约活动 |
 | **调用方** | 已登录用户 |
 | **被调用方** | `BookingService` |
 | **认证** | 必须登录 |
+| **速率限制** | 10次/分钟/用户 |
 
 **输入参数**：
 
@@ -180,23 +123,7 @@
 | `participants` | integer | 否 | min:1, max:10, 默认 1 |
 | `remarks` | string | 否 | max:500 |
 
-**输出结构（成功）**：
-
-```json
-{
-  "success": true,
-  "data": {
-    "booking_id": 123,
-    "booking_code": "BK202512260001",
-    "status": "confirmed",
-    "activity": {
-      "id": 1,
-      "title": "string"
-    },
-    "booked_at": "datetime"
-  }
-}
-```
+**成功响应**：重定向至活动详情页，显示成功消息
 
 **失败响应**：
 
@@ -216,26 +143,22 @@
 
 | 属性 | 说明 |
 |-----|------|
-| **接口名称** | `DELETE /api/bookings/{id}` |
+| **路由** | `DELETE /bookings/{booking}` |
+| **控制器** | `BookingController@destroy` |
 | **职责** | 用户取消预约 |
 | **调用方** | 已登录用户（仅限本人） |
 | **被调用方** | `BookingService` |
 | **认证** | 必须登录，仅限本人操作 |
+| **速率限制** | 10次/分钟/用户 |
 
 **输入参数**：
 
 | 参数 | 类型 | 必填 | 校验规则 |
 |-----|------|-----|----------|
-| `id` | integer | 是 | exists:bookings,id |
+| `booking` | integer | 是 | exists:bookings,id |
+| `cancellation_reason` | string | 否 | max:255 |
 
-**输出结构（成功）**：
-
-```json
-{
-  "success": true,
-  "message": "预约已取消"
-}
-```
+**成功响应**：重定向至我的预约页面，显示成功消息
 
 **失败响应**：
 
@@ -251,40 +174,79 @@
 
 ---
 
-### 2.2 用户个人中心接口
+### 2.2 用户个人中心路由
 
-#### 2.2.1 获取我的预约列表
+> **说明**：所有个人中心路由都需要用户登录认证。
+
+#### 2.2.1 用户仪表盘
 
 | 属性 | 说明 |
 |-----|------|
-| **接口名称** | `GET /api/user/bookings` |
-| **职责** | 获取当前用户的预约列表 |
-| **认证** | 必须登录 |
+| **路由** | `GET /user/dashboard` |
+| **控制器** | `UserController@dashboard` |
+| **职责** | 显示用户个人中心仪表盘 |
+
+**输出**：Blade 视图 `user.dashboard`，包含：
+- 用户基本信息
+- 预约统计（总数、已完成、已取消）
+- 近期预约列表
+- 快捷操作链接
+
+---
+
+#### 2.2.2 我的预约列表
+
+| 属性 | 说明 |
+|-----|------|
+| **路由** | `GET /user/bookings` |
+| **控制器** | `UserController@bookings` |
+| **职责** | 显示当前用户的预约列表 |
 
 **输入参数**：
 
 | 参数 | 类型 | 必填 | 校验规则 |
 |-----|------|-----|----------|
-| `status` | string | 否 | enum: all, upcoming, completed, cancelled |
-| `page` | integer | 否 | min:1 |
+| `status` | string | 否 | enum: all, confirmed, completed, cancelled |
+
+**输出**：Blade 视图 `user.bookings`
 
 ---
 
-#### 2.2.2 获取/更新用户资料
+#### 2.2.3 个人资料管理
 
 | 属性 | 说明 |
 |-----|------|
-| **接口名称** | `GET/PUT /api/user/profile` |
-| **职责** | 获取或更新用户资料 |
-| **认证** | 必须登录 |
+| **路由 (查看)** | `GET /user/profile` |
+| **路由 (更新)** | `PUT /user/profile` |
+| **控制器** | `UserController@profile` / `UserController@updateProfile` |
+| **职责** | 查看或更新用户资料 |
 
 **更新参数**：
 
 | 参数 | 类型 | 必填 | 校验规则 |
 |-----|------|-----|----------|
 | `name` | string | 否 | max:50 |
-| `phone` | string | 否 | regex:手机号格式 |
+| `phone` | string | 否 | max:20 |
 | `avatar` | file | 否 | image, max:2MB |
+
+---
+
+#### 2.2.4 密码管理
+
+| 属性 | 说明 |
+|-----|------|
+| **路由 (查看)** | `GET /user/password` |
+| **路由 (更新)** | `PUT /user/password` |
+| **控制器** | `UserController@password` / `UserController@updatePassword` |
+| **职责** | 修改用户密码 |
+
+**更新参数**：
+
+| 参数 | 类型 | 必填 | 校验规则 |
+|-----|------|-----|----------|
+| `current_password` | string | 是 | 验证当前密码 |
+| `password` | string | 是 | min:8, confirmed |
+| `password_confirmation` | string | 是 | 与 password 匹配 |
 
 ---
 
@@ -292,22 +254,60 @@
 
 管理后台采用 Filament 4.0 内置的 CRUD 机制，通过 Resource 类定义。
 
+> **访问控制**：管理后台访问通过 `User::canAccessPanel()` 方法控制，检查 `is_admin` 字段。
+
 #### 2.3.1 活动管理 (ActivityResource)
 
-| 操作 | 权限 |
-|-----|------|
-| 列表 | `view_activity` |
-| 创建 | `create_activity` |
-| 编辑 | `update_activity` |
-| 删除 | `delete_activity` |
+| 操作 | 路由 | 权限 |
+|-----|------|------|
+| 列表 | `GET /admin/activities` | 管理员 |
+| 创建 | `GET/POST /admin/activities/create` | 管理员 |
+| 查看 | `GET /admin/activities/{record}` | 管理员 |
+| 编辑 | `GET/PUT /admin/activities/{record}/edit` | 管理员 |
+| 删除 | `DELETE /admin/activities/{record}` | 管理员 |
+
+**表单字段**：
+- 基本信息：标题、Slug、简介、详细内容
+- 时间设置：开始时间、结束时间、报名截止时间
+- 地点信息：地点名称、详细地址
+- 容量设置：容量上限、已预约人数
+- 发布设置：状态（草稿/已发布/已取消）、是否推荐
+- 媒体文件：封面图片、图片集
+
+---
 
 #### 2.3.2 预约管理 (BookingResource)
 
-| 操作 | 权限 |
-|-----|------|
-| 列表 | `view_booking` |
-| 查看详情 | `view_booking` |
-| 状态变更 | `update_booking` |
+| 操作 | 路由 | 权限 |
+|-----|------|------|
+| 列表 | `GET /admin/bookings` | 管理员 |
+| 查看详情 | `GET /admin/bookings/{record}` | 管理员 |
+| 编辑状态 | `GET/PUT /admin/bookings/{record}/edit` | 管理员 |
+
+> **说明**：预约不支持通过后台直接创建，只能通过前台用户预约生成。
+
+---
+
+#### 2.3.3 用户管理 (UserResource) - 新增功能
+
+| 操作 | 路由 | 权限 |
+|-----|------|------|
+| 列表 | `GET /admin/users` | 管理员 |
+| 创建 | `GET/POST /admin/users/create` | 管理员 |
+| 查看 | `GET /admin/users/{record}` | 管理员 |
+| 编辑 | `GET/PUT /admin/users/{record}/edit` | 管理员 |
+| 删除 | `DELETE /admin/users/{record}` | 管理员 |
+
+**表单字段**：
+- 基本信息：用户名、邮箱、电话、密码
+- 权限设置：管理员权限开关 (`is_admin`)
+- 头像：头像上传（支持圆形裁剪）
+
+**列表功能**：
+- 搜索：用户名、邮箱、电话
+- 筛选：管理员/普通用户
+- 排序：注册时间
+- 统计：预约数量
 
 ---
 
@@ -334,6 +334,7 @@
 **索引**：
 - UNIQUE(email)
 - INDEX(phone)
+- INDEX(is_admin)
 
 ---
 
@@ -381,7 +382,7 @@
 | 字段 | 类型 | 约束 | 说明 |
 |-----|------|-----|------|
 | id | bigint unsigned | PK, AI | 主键 |
-| booking_code | varchar(20) | UNIQUE, NOT NULL | 预约编号 |
+| booking_code | varchar(30) | UNIQUE, NOT NULL | 预约编号 |
 | user_id | bigint unsigned | FK(users.id), NOT NULL | 用户 ID |
 | activity_id | bigint unsigned | FK(activities.id), NOT NULL | 活动 ID |
 | participants | int unsigned | DEFAULT 1 | 参与人数 |
@@ -404,15 +405,39 @@
 
 ---
 
-### 3.2 并发与一致性假设
+### 3.2 预约编号生成规则
+
+预约编号 (`booking_code`) 采用以下格式：
+
+```
+BK + YYYYMMDD + XXXXXX + MMM
+```
+
+| 部分 | 说明 |
+|-----|------|
+| `BK` | 固定前缀 |
+| `YYYYMMDD` | 当前日期，8位 |
+| `XXXXXX` | 6位随机数 (000001-999999) |
+| `MMM` | 毫秒时间戳后3位 |
+
+**示例**：`BK20251226123456789`
+
+**唯一性保证**：
+1. 首次生成后检查数据库唯一性
+2. 若冲突，最多重试10次
+3. 超过重试次数，使用 MD5 哈希作为备选方案
+
+---
+
+### 3.3 并发与一致性假设
 
 | 场景 | 策略 |
 |-----|------|
 | 预约时名额竞争 | 使用数据库事务 + 悲观锁（`lockForUpdate()`） |
 | 取消预约时释放名额 | 事务内原子操作 |
-| booked_count 一致性 | 通过触发器或应用层事务保证 |
+| booked_count 一致性 | 通过应用层事务保证 |
 
-### 3.3 数据增长与查询模式预期
+### 3.4 数据增长与查询模式预期
 
 | 预期指标 | 估算值 |
 |---------|--------|
@@ -421,7 +446,7 @@
 | 预约记录 | 100,000+/年 |
 | 主要查询 | 活动列表（按时间筛选）、用户预约历史 |
 
-### 3.4 向后兼容性与数据迁移风险
+### 3.5 向后兼容性与数据迁移风险
 
 - 使用 Laravel Migration 管理数据库版本
 - 新增字段使用 NULLABLE 或提供默认值
@@ -441,19 +466,44 @@
 | 活动详情 | `/activities/{slug}` | 列表点击 |
 | 用户注册 | `/register` | 导航点击/预约时跳转 |
 | 用户登录 | `/login` | 导航点击/预约时跳转 |
-| 个人中心 | `/user/dashboard` | 登录后导航 |
+| 用户仪表盘 | `/user/dashboard` | 登录后导航 |
 | 我的预约 | `/user/bookings` | 个人中心菜单 |
 | 个人资料 | `/user/profile` | 个人中心菜单 |
+| 修改密码 | `/user/password` | 个人中心菜单 |
 | 管理后台 | `/admin` | 管理员登录后访问 |
+| 活动管理 | `/admin/activities` | 后台侧边栏 |
+| 预约管理 | `/admin/bookings` | 后台侧边栏 |
+| 用户管理 | `/admin/users` | 后台侧边栏 |
 
 ### 4.2 与后端契约的边界
 
 | 层级 | 职责 |
 |-----|------|
-| 前端 | UI 渲染、表单验证（基础）、状态管理、API 调用 |
+| 前端 | UI 渲染、表单验证（基础）、状态管理、交互反馈 |
 | 后端 | 业务逻辑、数据验证（权威）、认证授权、数据持久化 |
 
-### 4.3 性能与渲染假设
+### 4.3 认证模型
+
+> **重要说明**：前台和后台共享同一套 Laravel Session 认证机制。
+
+| 区域 | 访问控制 |
+|-----|----------|
+| 前台公开页面 | 无需认证 |
+| 前台预约功能 | 需要登录（`auth` 中间件） |
+| 个人中心 | 需要登录（`auth` 中间件） |
+| 管理后台 | 需要登录 + `is_admin = true` |
+
+**后台访问控制实现**：
+
+```php
+// app/Models/User.php
+public function canAccessPanel(Panel $panel): bool
+{
+    return $this->is_admin === true;
+}
+```
+
+### 4.4 性能与渲染假设
 
 | 指标 | 目标值 |
 |-----|--------|
@@ -556,7 +606,7 @@
 [用户点击"取消预约"]
    │
    ▼
-[显示确认弹窗]
+[显示确认弹窗（包含取消原因输入）]
    │
    ├── 用户点击"取消" ──► [关闭弹窗] ──► [结束]
    │
@@ -572,6 +622,9 @@
    │
    ▼
 [更新预约状态为 cancelled]
+   │
+   ▼
+[记录取消时间和原因]
    │
    ▼
 [减少活动 booked_count]
@@ -631,11 +684,37 @@
 [结束]
 ```
 
-### 5.4 与外部系统交互节点
+### 5.4 管理员管理用户流程（新增）
+
+```
+[开始]
+   │
+   ▼
+[管理员登录后台]
+   │
+   ▼
+[进入用户管理页面]
+   │
+   ▼
+[查看用户列表]
+   │
+   ├── 搜索/筛选用户 ──► [显示筛选结果]
+   │
+   ├── 点击"新建用户" ──► [创建用户流程]
+   │
+   ├── 点击"编辑" ──► [编辑用户流程]
+   │
+   ├── 点击"查看" ──► [查看用户详情]
+   │
+   ▼
+[结束]
+```
+
+### 5.5 与外部系统交互节点
 
 | 节点 | 外部系统 | 说明 |
 |-----|---------|------|
-| 文件上传 | 文件存储系统 (local/S3) | 活动图片存储 |
+| 文件上传 | 文件存储系统 (local/S3) | 活动图片、用户头像存储 |
 | 邮件通知 | 邮件服务 (SMTP/Mailgun) | 预约确认通知（待确认） |
 
 ---
@@ -709,6 +788,8 @@
 | 功能测试 | 核心流程 100% |
 | 集成测试 | API 端点 100% |
 
+**测试框架**：PHPUnit 10.x + Laravel Testing
+
 ---
 
 ## 8. 信息安全、合规与审计 (Security, Compliance & Audit)
@@ -720,7 +801,7 @@
 | 前台公开页面 | 无需认证 | - |
 | 前台预约功能 | Session Cookie | 登录用户 |
 | 个人中心 | Session Cookie | 仅限本人 |
-| 管理后台 | Session Cookie + Filament Shield | 管理员角色 |
+| 管理后台 | Session Cookie + canAccessPanel | 管理员角色 (`is_admin = true`) |
 
 ### 8.2 敏感数据处理原则
 
@@ -740,6 +821,8 @@
 | 预约取消 | user_id, booking_id, 时间, 原因 |
 | 活动发布 | admin_id, activity_id, 时间 |
 | 活动编辑 | admin_id, activity_id, 变更字段 |
+| 用户创建（后台） | admin_id, new_user_id, 时间 |
+| 用户编辑（后台） | admin_id, user_id, 变更字段 |
 
 ### 8.4 第三方依赖信任假设
 
@@ -771,6 +854,7 @@
 | 预约取消 | INFO | booking.log |
 | 预约失败（名额不足） | WARNING | booking.log |
 | 活动发布 | INFO | activity.log |
+| 用户管理操作 | INFO | admin.log |
 | 系统错误 | ERROR | laravel.log |
 
 ### 9.2 成功/失败行为可观测性
@@ -836,18 +920,25 @@
 
 ### 10.2 个人中心功能
 
-#### AC-007: 查看我的预约
+#### AC-007: 用户仪表盘
+- **Given**: 用户已登录
+- **When**: 用户访问个人中心仪表盘
+- **Then**: 显示预约统计信息
+- **And**: 显示近期预约列表
+- **And**: 显示快捷操作链接
+
+#### AC-008: 查看我的预约
 - **Given**: 用户已登录且有预约记录
 - **When**: 用户访问"我的预约"页面
 - **Then**: 显示预约列表（包含活动信息、预约状态）
 
-#### AC-008: 取消预约
+#### AC-009: 取消预约
 - **Given**: 用户有一个未开始活动的预约
 - **When**: 用户点击取消并确认
 - **Then**: 预约状态变为"已取消"
 - **And**: 活动剩余名额增加
 
-#### AC-009: 编辑个人资料
+#### AC-010: 编辑个人资料
 - **Given**: 用户已登录
 - **When**: 用户修改姓名/手机号并保存
 - **Then**: 资料更新成功
@@ -855,22 +946,30 @@
 
 ### 10.3 管理后台功能
 
-#### AC-010: 创建活动
+#### AC-011: 创建活动
 - **Given**: 管理员已登录后台
 - **When**: 管理员填写活动信息、上传图片并保存
 - **Then**: 活动创建成功
 - **And**: 图片正确存储
 
-#### AC-011: 编辑活动
+#### AC-012: 编辑活动
 - **Given**: 存在一个活动
 - **When**: 管理员修改活动信息并保存
 - **Then**: 活动更新成功
 
-#### AC-012: 查看预约列表
+#### AC-013: 查看预约列表
 - **Given**: 管理员已登录后台
 - **When**: 管理员访问预约管理页面
 - **Then**: 显示所有预约记录
 - **And**: 支持按活动、用户、状态筛选
+
+#### AC-014: 管理用户（新增）
+- **Given**: 管理员已登录后台
+- **When**: 管理员访问用户管理页面
+- **Then**: 显示所有用户列表
+- **And**: 可以创建新用户
+- **And**: 可以编辑用户信息
+- **And**: 可以设置/取消管理员权限
 
 ### 10.4 非功能性验收
 
@@ -903,6 +1002,7 @@
 | 认证方式 | Session-based | 传统 Web 应用，简单可靠 |
 | 预约锁机制 | 悲观锁 | 简单可靠，适合中小规模并发 |
 | 数据库 | 建议迁移至 MySQL | SQLite 不适合生产并发 |
+| 用户管理 | 后台独立模块 | 便于管理员统一管理用户账号和权限 |
 
 ### 11.3 延后处理的问题与演进方向
 
@@ -929,7 +1029,34 @@
 | Alpine.js | 3.x | 前端交互 |
 | MySQL | 8.0+ | 生产数据库（建议） |
 
-### B. 待确认事项清单
+### B. Filament 4.0 技术说明
+
+> **重要**：Filament 4.0 相比之前版本有重大变更。
+
+#### B.1 命名空间变更
+
+| 组件类型 | 旧命名空间 | 新命名空间 |
+|---------|-----------|-----------|
+| 表单输入组件 | `Filament\Forms\Components` | `Filament\Forms\Components` |
+| 布局组件 | `Filament\Forms\Components` | `Filament\Schemas\Components` |
+| 表格操作 | `Filament\Tables\Actions` | `Filament\Actions` |
+
+#### B.2 类型声明
+
+Resource 类的静态属性需要特定类型：
+
+```php
+protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';
+protected static string | \BackedEnum | null $navigationGroup = '系统管理';
+```
+
+#### B.3 表单方法签名
+
+```php
+public static function form(Filament\Schemas\Schema $schema): Filament\Schemas\Schema
+```
+
+### C. 待确认事项清单
 
 | 编号 | 事项 | 负责人 | 状态 |
 |-----|------|--------|------|
@@ -939,7 +1066,76 @@
 | 4 | 前台 UI 设计稿 | 设计师 | 待提供 |
 | 5 | 生产环境部署方案 | 运维 | 待确认 |
 
+### D. 项目结构
+
+```
+app/
+├── Filament/
+│   └── Resources/
+│       ├── ActivityResource.php       # 活动管理
+│       ├── ActivityResource/Pages/
+│       ├── BookingResource.php         # 预约管理
+│       ├── BookingResource/Pages/
+│       ├── UserResource.php            # 用户管理（新增）
+│       └── UserResource/Pages/
+├── Http/
+│   └── Controllers/
+│       ├── ActivityController.php      # 活动前台控制器
+│       ├── BookingController.php       # 预约控制器
+│       ├── HomeController.php          # 首页控制器
+│       └── UserController.php          # 用户中心控制器
+├── Models/
+│   ├── Activity.php
+│   ├── Booking.php
+│   └── User.php
+└── Services/
+    ├── ActivityService.php
+    └── BookingService.php
+
+database/
+├── factories/
+│   ├── ActivityFactory.php
+│   └── BookingFactory.php
+└── migrations/
+    ├── 2025_12_26_000001_create_activities_table.php
+    ├── 2025_12_26_000002_create_bookings_table.php
+    └── 2025_12_26_000003_add_fields_to_users_table.php
+
+resources/views/
+├── activities/
+│   ├── index.blade.php
+│   └── show.blade.php
+├── auth/
+│   ├── login.blade.php
+│   └── register.blade.php
+├── components/
+│   ├── activity-card.blade.php
+│   └── activity-card-compact.blade.php
+├── layouts/
+│   └── app.blade.php
+├── user/
+│   ├── bookings.blade.php
+│   ├── dashboard.blade.php
+│   └── profile.blade.php
+└── home.blade.php
+
+tests/
+├── Feature/
+│   ├── Models/
+│   │   ├── ActivityTest.php
+│   │   └── BookingTest.php
+│   └── Services/
+│       ├── ActivityServiceTest.php
+│       └── BookingServiceTest.php
+└── Unit/
+    ├── Models/
+    │   ├── ActivityTest.php
+    │   └── BookingTest.php
+    └── Services/
+        ├── ActivityServiceTest.php
+        └── BookingServiceTest.php
+```
+
 ---
 
 *文档结束*
-

@@ -29,7 +29,8 @@ class AuthenticatedSessionController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
+            // 只重新生成 web guard 的 session，不影响 admin guard
             $request->session()->regenerate();
 
             return redirect()->intended(route('home'));
