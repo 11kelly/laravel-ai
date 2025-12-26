@@ -54,7 +54,7 @@
                             <div class="aspect-video bg-gray-200">
                                 @if($event->images->count() > 0)
                                     <img 
-                                        src="{{ Storage::disk('public')->url($event->images->first()->image_url) }}" 
+                                        src="{{ $event->images->first()->full_url }}" 
                                         alt="{{ $event->title }}"
                                         class="w-full h-full object-cover"
                                     >

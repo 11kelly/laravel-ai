@@ -88,7 +88,7 @@ class UserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
-                    ->disk('public')
+                    ->url(fn ($record) => $record->avatar_url)
                     ->circular(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()

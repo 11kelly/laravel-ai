@@ -125,7 +125,7 @@ class EventResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image')
-                    ->disk('public')
+                    ->url(fn ($record) => $record->cover_image_url)
                     ->square(),
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()

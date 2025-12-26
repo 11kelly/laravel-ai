@@ -95,10 +95,44 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if (Str::startsWith($this->avatar, ['http://', 'https://'])) {
-            return $this->avatar;
+            return $this->addPortToUrl($this->avatar);
         }
 
-        return asset('storage/' . $this->avatar);
+        $url = asset('storage/' . $this->avatar);
+        return $this->addPortToUrl($url);
+    }
+
+    /**
+     * Add port 8000 to URL if not already present
+     */
+    private function addPortToUrl(string $url): string
+    {
+        // If URL is relative, return as is (shouldn't happen with asset())
+        if (!Str::startsWith($url, ['http://', 'https://'])) {
+            return $url;
+        }
+
+        // Parse URL
+        $parsed = parse_url($url);
+        
+        if (!$parsed || !isset($parsed['host'])) {
+            return $url;
+        }
+
+        // If port is already set, return as is
+        if (isset($parsed['port'])) {
+            return $url;
+        }
+
+        // Rebuild URL with port 8000
+        $scheme = $parsed['scheme'] ?? 'http';
+        $host = $parsed['host'];
+        $port = ':8000';
+        $path = $parsed['path'] ?? '';
+        $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+        $fragment = isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '';
+
+        return $scheme . '://' . $host . $port . $path . $query . $fragment;
     }
 
     /**

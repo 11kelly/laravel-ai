@@ -140,10 +140,44 @@ class Event extends Model
         }
 
         if (Str::startsWith($this->cover_image, ['http://', 'https://'])) {
-            return $this->cover_image;
+            return $this->addPortToUrl($this->cover_image);
         }
 
-        return asset('storage/' . $this->cover_image);
+        $url = asset('storage/' . $this->cover_image);
+        return $this->addPortToUrl($url);
+    }
+
+    /**
+     * Add port 8000 to URL if not already present
+     */
+    private function addPortToUrl(string $url): string
+    {
+        // If URL is relative, return as is (shouldn't happen with asset())
+        if (!Str::startsWith($url, ['http://', 'https://'])) {
+            return $url;
+        }
+
+        // Parse URL
+        $parsed = parse_url($url);
+        
+        if (!$parsed || !isset($parsed['host'])) {
+            return $url;
+        }
+
+        // If port is already set, return as is
+        if (isset($parsed['port'])) {
+            return $url;
+        }
+
+        // Rebuild URL with port 8000
+        $scheme = $parsed['scheme'] ?? 'http';
+        $host = $parsed['host'];
+        $port = ':8000';
+        $path = $parsed['path'] ?? '';
+        $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+        $fragment = isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '';
+
+        return $scheme . '://' . $host . $port . $path . $query . $fragment;
     }
 
     /**

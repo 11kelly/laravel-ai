@@ -48,7 +48,7 @@ class ImagesRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Image')
-                    ->disk('public')
+                    ->url(fn ($record) => $record->full_url)
                     ->square()
                     ->size(80),
                 Tables\Columns\TextColumn::make('display_order')

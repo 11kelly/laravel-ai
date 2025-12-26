@@ -33,7 +33,7 @@
                         @if($event->images->count() > 0)
                             <div class="aspect-video bg-gray-200">
                                 <img 
-                                    src="{{ Storage::disk('public')->url($event->images->first()->image_url) }}" 
+                                    src="{{ $event->images->first()->full_url }}" 
                                     alt="{{ $event->title }}"
                                     class="w-full h-full object-cover"
                                 >
@@ -43,7 +43,7 @@
                                 <div class="p-4 flex gap-2 overflow-x-auto">
                                     @foreach($event->images as $image)
                                         <img 
-                                            src="{{ Storage::disk('public')->url($image->image_url) }}" 
+                                            src="{{ $image->full_url }}" 
                                             alt="{{ $event->title }}"
                                             class="h-20 w-32 object-cover rounded cursor-pointer hover:opacity-75"
                                         >

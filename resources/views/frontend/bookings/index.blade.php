@@ -31,7 +31,7 @@
                                         <div class="aspect-video bg-gray-200 rounded-lg overflow-hidden">
                                             @if($booking->event->images->count() > 0)
                                                 <img 
-                                                    src="{{ Storage::disk('public')->url($booking->event->images->first()->image_url) }}" 
+                                                    src="{{ $booking->event->images->first()->full_url }}" 
                                                     alt="{{ $booking->event->title }}"
                                                     class="w-full h-full object-cover"
                                                 >
