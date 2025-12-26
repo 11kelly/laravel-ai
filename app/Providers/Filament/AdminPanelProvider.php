@@ -28,13 +28,48 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->authGuard('admin')
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Indigo,
             ])
+            ->font('Inter')
+            ->brandName('活动预约后台')
+            ->userMenuItems([
+                'profile' => \Filament\Navigation\MenuItem::make()
+                    ->label('个人资料')
+                    ->url(fn(): string => \App\Filament\Pages\Auth\EditProfile::getUrl())
+                    ->icon('heroicon-o-user-circle'),
+            ])
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::HEAD_END,
+                fn() => new \Illuminate\Support\HtmlString('
+                    <style>
+                        .fi-simple-main {
+                            border-radius: 1.5rem !important;
+                        }
+                        .fi-btn { 
+                            padding-top: 0.75rem !important; 
+                            padding-bottom: 0.75rem !important;
+                            font-weight: 700 !important;
+                            border-radius: 0.75rem !important;
+                            transition: all 0.2s !important;
+                        }
+                        .fi-btn:active {
+                            transform: scale(0.98);
+                        }
+                        .fi-simple-page .fi-logo {
+                            font-size: 1.5rem;
+                            font-weight: 800;
+                            letter-spacing: -0.025em;
+                        }
+                    </style>
+                ')
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
+                \App\Filament\Pages\Auth\EditProfile::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
@@ -53,7 +88,8 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->authMiddleware([
-                Authenticate::class,
+                \Filament\Http\Middleware\Authenticate::class,
+                \App\Http\Middleware\EnsureUserIsAdmin::class,
             ]);
     }
 }

@@ -14,7 +14,7 @@ Laravel AI Kelly 是一个基于 Laravel 框架和 Filament 管理面板构建�
 ### 主要特性
 
 - 🚀 基于 Laravel 11.x 框架
-- 🎨 使用 Filament 3.x 管理面板
+- 🎨 使用 Filament 4.x 管理面板
 - 🤖 集成 AI 功能
 - 📱 响应式设计
 - 🔒 安全的用户认证系统
@@ -157,7 +157,7 @@ php artisan make:filament-widget StatsOverview
 
 - **后端**: Laravel 11.x + PHP 8.2+
 - **前端**: Blade 模板 + Tailwind CSS
-- **管理面板**: Filament 3.x
+- **管理面板**: Filament 4.x
 - **数据库**: SQLite (开发环境) / MySQL (生产环境)
 - **构建工具**: Vite
 
