@@ -26,12 +26,20 @@ class ActivityController extends Controller
      */
     public function index(Request $request): View|JsonResponse
     {
+        $validated = $request->validate([
+            'status' => ['nullable', 'string', 'in:draft,published,cancelled'],
+            'temporal_status' => ['nullable', 'string', 'in:upcoming,ongoing,ended'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
         $filters = [
-            'status' => $request->input('status'),
-            'temporal_status' => $request->input('temporal_status'),
-            'date_from' => $request->input('date_from'),
-            'date_to' => $request->input('date_to'),
-            'per_page' => $request->input('per_page', 15),
+            'status' => $validated['status'] ?? null,
+            'temporal_status' => $validated['temporal_status'] ?? null,
+            'date_from' => $validated['date_from'] ?? null,
+            'date_to' => $validated['date_to'] ?? null,
+            'per_page' => $validated['per_page'] ?? 15,
         ];
 
         // Frontend should only show published activities by default
@@ -73,7 +81,8 @@ class ActivityController extends Controller
      */
     public function show(Request $request, int $id): View|JsonResponse
     {
-        $activity = $this->activityService->getActivityById($id);
+        // Frontend should only show published activities
+        $activity = $this->activityService->getActivityById($id, onlyPublished: true);
 
         if (! $activity) {
             if ($request->expectsJson()) {

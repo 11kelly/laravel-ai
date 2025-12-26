@@ -15,8 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @method static \Database\Factories\ActivityFactory factory($count = null, $state = [])
+ */
 class Activity extends Model
 {
+    /** @use HasFactory<\Database\Factories\ActivityFactory> */
     use HasFactory, SoftDeletes;
 
     /**

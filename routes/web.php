@@ -17,22 +17,6 @@ Route::get('/', function () {
     return redirect()->route('activities.index');
 });
 
-// Debug route to test logging (remove in production)
-Route::get('/debug/csrf-test', function (\Illuminate\Http\Request $request) {
-    \Illuminate\Support\Facades\Log::info('Debug: CSRF Test Route Accessed', [
-        'session_id' => $request->hasSession() ? $request->session()->getId() : 'NO_SESSION',
-        'session_token' => $request->hasSession() ? $request->session()->token() : 'NO_SESSION',
-        'ip' => $request->ip(),
-    ]);
-    
-    return response()->json([
-        'message' => 'Debug route accessed. Check logs.',
-        'session_id' => $request->hasSession() ? $request->session()->getId() : 'NO_SESSION',
-        'session_token' => $request->hasSession() ? substr($request->session()->token(), 0, 20) . '...' : 'NO_SESSION',
-        'log_file' => storage_path('logs/laravel.log'),
-    ]);
-});
-
 // Public routes
 Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
 Route::get('/activities/{id}', [ActivityController::class, 'show'])->name('activities.show');

@@ -22,13 +22,12 @@ class ActivityService
     {
         $query = Activity::query();
 
-        // For frontend, only show published activities by default
-        if ($onlyPublished && ! isset($filters['status'])) {
+        // For frontend, only show published activities
+        // When onlyPublished is true, always filter by published status
+        if ($onlyPublished) {
             $query->where('status', 'published');
-        }
-
-        // Filter by status
-        if (isset($filters['status'])) {
+        } elseif (isset($filters['status'])) {
+            // Only apply status filter when onlyPublished is false
             $query->where('status', $filters['status']);
         }
 
@@ -59,9 +58,15 @@ class ActivityService
     /**
      * Get a single activity by ID.
      */
-    public function getActivityById(int $id): ?Activity
+    public function getActivityById(int $id, bool $onlyPublished = false): ?Activity
     {
-        return Activity::find($id);
+        $query = Activity::query();
+        
+        if ($onlyPublished) {
+            $query->where('status', 'published');
+        }
+        
+        return $query->find($id);
     }
 
     /**

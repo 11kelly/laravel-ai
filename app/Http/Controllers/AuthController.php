@@ -26,23 +26,6 @@ class AuthController extends Controller
      */
     public function showRegisterForm(Request $request): View
     {
-        $sessionId = $request->hasSession() ? $request->session()->getId() : 'NO_SESSION';
-        $sessionToken = $request->hasSession() ? $request->session()->token() : 'NO_SESSION';
-        
-        Log::info('Registration Form Accessed', [
-            'url' => $request->fullUrl(),
-            'session_id' => $sessionId,
-            'session_token' => $sessionToken ? substr($sessionToken, 0, 20) . '...' : 'NULL',
-            'session_exists' => $request->hasSession(),
-            'session_started' => $request->hasSession() ? $request->session()->isStarted() : false,
-            'session_lifetime' => config('session.lifetime'),
-            'session_driver' => config('session.driver'),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'referer' => $request->header('referer'),
-            'cookies' => $request->cookies->all(),
-        ]);
-        
         return view('auth.register');
     }
 
@@ -51,25 +34,6 @@ class AuthController extends Controller
      */
     public function register(Request $request): RedirectResponse
     {
-        $sessionId = $request->hasSession() ? $request->session()->getId() : 'NO_SESSION';
-        $sessionToken = $request->hasSession() ? $request->session()->token() : 'NO_SESSION';
-        $requestToken = $request->input('_token');
-        
-        Log::info('Registration Request Received', [
-            'url' => $request->fullUrl(),
-            'method' => $request->method(),
-            'session_id' => $sessionId,
-            'session_token' => $sessionToken ? substr($sessionToken, 0, 20) . '...' : 'NULL',
-            'request_token' => $requestToken ? substr($requestToken, 0, 20) . '...' : 'NULL',
-            'tokens_match' => $sessionToken === $requestToken,
-            'session_exists' => $request->hasSession(),
-            'session_started' => $request->hasSession() ? $request->session()->isStarted() : false,
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'referer' => $request->header('referer'),
-            'input_data' => $request->except(['password', 'password_confirmation', '_token']),
-        ]);
-        
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:50'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],

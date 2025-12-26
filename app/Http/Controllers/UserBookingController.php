@@ -28,9 +28,14 @@ class UserBookingController extends Controller
      */
     public function index(Request $request): View|JsonResponse
     {
+        $validated = $request->validate([
+            'status' => ['nullable', 'string', 'in:pending,confirmed,cancelled'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
         $filters = [
-            'status' => $request->input('status'),
-            'per_page' => $request->input('per_page', 15),
+            'status' => $validated['status'] ?? null,
+            'per_page' => $validated['per_page'] ?? 15,
         ];
 
         $bookings = $this->bookingService->getUserBookings(Auth::id(), $filters);
@@ -73,6 +78,10 @@ class UserBookingController extends Controller
                 'status' => $booking->status,
                 'cancelled_at' => $booking->cancelled_at?->toIso8601String(),
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Booking not found',
+            ], 404);
         } catch (\Exception $e) {
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
 

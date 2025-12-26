@@ -113,6 +113,13 @@ class BookingService
             $activity = $booking->activity;
             if ($activity && $activity->max_participants > 0) {
                 $activity->decrement('current_participants');
+            } elseif (! $activity) {
+                // Activity may have been soft deleted, log warning
+                Log::warning('Booking cancelled but activity not found', [
+                    'booking_id' => $bookingId,
+                    'activity_id' => $booking->activity_id,
+                    'user_id' => $userId,
+                ]);
             }
 
             Log::info('Booking cancelled successfully', [
@@ -138,7 +145,7 @@ class BookingService
             $query->where('status', $filters['status']);
         }
 
-        $perPage = (int) ($filters['per_page'] ?? 15);
+        $perPage = min((int) ($filters['per_page'] ?? 15), 50);
 
         return $query->paginate($perPage);
     }
@@ -163,7 +170,7 @@ class BookingService
             $query->where('status', $filters['status']);
         }
 
-        $perPage = (int) ($filters['per_page'] ?? 15);
+        $perPage = min((int) ($filters['per_page'] ?? 15), 50);
 
         return $query->paginate($perPage);
     }
