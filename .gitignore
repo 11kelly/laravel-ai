@@ -63,3 +63,18 @@ composer.phar
 
 # Laravel specific
 /public/mix-manifest.json
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+/database/*.sqlite
+/database/*.sqlite3
+
+docs/
+
+# Vendor translations - only keep custom translations (zh_TW)
+/lang/vendor/**
+!/lang/vendor/**/
+!/lang/vendor/**/zh_TW/
+!/lang/vendor/**/zh_TW/**
