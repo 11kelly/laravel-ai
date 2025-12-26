@@ -29,6 +29,7 @@ class EventsTable
             ->columns([
                 ImageColumn::make('image')
                     ->label('图片')
+                    ->disk('public')
                     ->circular()
                     ->defaultImageUrl(url('/images/placeholder.png')),
 
