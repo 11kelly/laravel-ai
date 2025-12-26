@@ -29,9 +29,13 @@ require __DIR__.'/auth.php';
 
 // 需要登录的路由
 Route::middleware('auth')->group(function () {
-    // 预约
-    Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
-    Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
+    // 预约（添加速率限制：10次/分钟/用户）
+    Route::post('/bookings', [BookingController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('bookings.store');
+    Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])
+        ->middleware('throttle:10,1')
+        ->name('bookings.destroy');
 
     // 用户中心
     Route::prefix('user')->name('user.')->group(function () {

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\HtmlPurifierService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -59,6 +60,26 @@ class Activity extends Model
                 $activity->slug = Str::slug($activity->title) . '-' . Str::random(6);
             }
         });
+
+        // 保存前净化 HTML 内容，防止 XSS 攻击
+        static::saving(function (Activity $activity): void {
+            if ($activity->isDirty('content') && $activity->content !== null) {
+                $purifier = app(HtmlPurifierService::class);
+                $activity->content = $purifier->purify($activity->content);
+            }
+        });
+    }
+
+    /**
+     * 获取净化后的内容（双重保障）
+     */
+    public function getSafeContentAttribute(): ?string
+    {
+        if ($this->content === null) {
+            return null;
+        }
+
+        return app(HtmlPurifierService::class)->purify($this->content);
     }
 
     public function creator(): BelongsTo

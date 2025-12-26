@@ -55,7 +55,11 @@ class BookingController extends Controller
             abort(403);
         }
 
-        $reason = $request->input('cancellation_reason');
+        $validated = $request->validate([
+            'cancellation_reason' => 'nullable|string|max:255',
+        ]);
+
+        $reason = $validated['cancellation_reason'] ?? null;
         $result = $this->bookingService->cancelBooking($booking, $reason);
 
         if ($result['success']) {

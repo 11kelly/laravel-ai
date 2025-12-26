@@ -126,6 +126,18 @@ class BookingService
 
         try {
             return DB::transaction(function () use ($booking, $reason): array {
+                // 使用悲观锁防止并发取消导致的竞态条件
+                $booking = Booking::query()->lockForUpdate()->find($booking->id);
+
+                // 双重检查状态（防止并发请求）
+                if ($booking->status !== 'confirmed') {
+                    return [
+                        'success' => false,
+                        'message' => '此预约无法取消',
+                        'code' => 409,
+                    ];
+                }
+
                 $booking->update([
                     'status' => 'cancelled',
                     'cancelled_at' => now(),

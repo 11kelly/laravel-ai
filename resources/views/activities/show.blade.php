@@ -78,7 +78,8 @@
                         <div class="bg-white rounded-2xl p-6 shadow-sm">
                             <h2 class="text-xl font-bold text-slate-900 mb-4">详细内容</h2>
                             <div class="prose prose-slate max-w-none">
-                                {!! $activity->content !!}
+                                {{-- 使用 safe_content 属性，确保 HTML 已被净化防止 XSS --}}
+                                {!! $activity->safe_content !!}
                             </div>
                         </div>
                     @endif

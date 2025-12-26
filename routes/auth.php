@@ -11,10 +11,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    // 注册接口限流：3次/小时/IP
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware('throttle:3,60');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    // 登录接口限流：5次/分钟/IP
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('throttle:5,1');
 });
 
 Route::middleware('auth')->group(function () {

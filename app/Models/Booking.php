@@ -48,9 +48,27 @@ class Booking extends Model
     {
         $prefix = 'BK';
         $date = now()->format('Ymd');
-        $random = str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
 
-        return $prefix . $date . $random;
+        // 使用更高熵值的随机数，并添加唯一性检查重试机制
+        $maxRetries = 10;
+        $retries = 0;
+
+        do {
+            // 使用 6 位随机数（100万种可能）+ 毫秒时间戳后 3 位
+            $random = str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
+            $suffix = substr((string) (microtime(true) * 1000), -3);
+            $code = $prefix . $date . $random . $suffix;
+
+            $exists = self::where('booking_code', $code)->exists();
+            $retries++;
+        } while ($exists && $retries < $maxRetries);
+
+        if ($exists) {
+            // 如果仍然存在碰撞，使用 UUID 作为后备方案
+            $code = $prefix . $date . strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 8));
+        }
+
+        return $code;
     }
 
     public function user(): BelongsTo
