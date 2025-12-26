@@ -1,4 +1,10 @@
 <?php
+/**
+ * Developed by eBrook Group.
+ * Copyright © 2026 eBrook Group (https://www.ebrook.com.tw)
+ */
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
@@ -20,6 +26,7 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'role' => 'admin',
         ]);
     }
 }
