@@ -157,7 +157,7 @@ php artisan make:filament-widget StatsOverview
 
 - **后端**: Laravel 11.x + PHP 8.2+
 - **前端**: Blade 模板 + Tailwind CSS
-- **管理面板**: Filament 3.x
+- **管理面板**: Filament 4.0
 - **数据库**: SQLite (开发环境) / MySQL (生产环境)
 - **构建工具**: Vite
 

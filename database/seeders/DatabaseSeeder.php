@@ -15,11 +15,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // 创建测试用户
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+        ]);
+
+        // 创建更多用户用于预约
+        User::factory(10)->create();
+
+        $this->call([
+            EventSeeder::class,
+            BookingSeeder::class,
         ]);
     }
 }
