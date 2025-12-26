@@ -13,6 +13,7 @@ use App\Models\Booking;
 use App\Models\User;
 use App\Services\BookingService;
 use App\Services\BookingServiceException;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -26,8 +27,8 @@ class CreateBooking extends CreateRecord
         /** @var BookingService $service */
         $service = app(BookingService::class);
 
-        $actor = auth()->user();
-        if (! $actor?->isAdmin()) {
+        $actor = Filament::auth()->user();
+        if (! $actor || ! $actor->isAdmin()) {
             Notification::make()->title('无权限')->danger()->send();
             $this->halt();
         }

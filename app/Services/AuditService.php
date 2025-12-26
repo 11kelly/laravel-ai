@@ -9,14 +9,14 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\AuditEvent;
-use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Carbon;
 
 class AuditService
 {
     public function record(
         string $eventType,
-        ?User $actor,
+        ?Authenticatable $actor,
         string $actorType,
         ?string $targetType = null,
         ?int $targetId = null,
@@ -28,7 +28,7 @@ class AuditService
             'event_type' => $eventType,
             'occurred_at' => ($occurredAt ?? now()),
             'actor_type' => $actorType,
-            'actor_id' => $actor?->id,
+            'actor_id' => $actor?->getAuthIdentifier(),
             'target_type' => $targetType,
             'target_id' => $targetId,
             'request_id' => $requestId,

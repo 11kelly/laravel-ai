@@ -11,6 +11,7 @@ namespace App\Services;
 use App\Models\Activity;
 use App\Models\Booking;
 use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -52,7 +53,7 @@ class BookingService
      * @throws BookingServiceException
      */
     public function createBookingOnBehalf(
-        User $actor,
+        Authenticatable $actor,
         User $user,
         int $activityId,
         ?string $idempotencyKey = null,
@@ -150,7 +151,7 @@ class BookingService
      * @throws BookingServiceException
      */
     public function cancelBooking(
-        User $actor,
+        Authenticatable $actor,
         int $bookingId,
         ?string $reason = null,
         ?string $requestId = null,
@@ -166,7 +167,7 @@ class BookingService
                 throw new BookingServiceException('BOOKING_NOT_FOUND');
             }
 
-            $ownerId = $impersonatedUser?->id ?? $actor->id;
+            $ownerId = $impersonatedUser?->id ?? (int) $actor->getAuthIdentifier();
             if ((int) $booking->user_id !== (int) $ownerId) {
                 throw new BookingServiceException('FORBIDDEN');
             }

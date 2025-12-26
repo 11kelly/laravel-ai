@@ -1,4 +1,10 @@
 <?php
+/**
+ * Developed by eBrook Group.
+ * Copyright © 2026 eBrook Group (https://www.ebrook.com.tw)
+ */
+
+declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
@@ -12,6 +18,8 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
+use App\Http\Middleware\UseAdminSessionCookie;
+use App\Http\Middleware\FilamentAdminAuthDebugMiddleware;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -27,6 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->authGuard('admin')
             ->login()
             ->colors([
                 'primary' => Color::Amber,
@@ -44,7 +53,9 @@ class AdminPanelProvider extends PanelProvider
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
+                UseAdminSessionCookie::class,
                 StartSession::class,
+                FilamentAdminAuthDebugMiddleware::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,

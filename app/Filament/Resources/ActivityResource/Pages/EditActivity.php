@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ActivityResource\Pages;
 
 use App\Filament\Resources\ActivityResource;
+use Filament\Facades\Filament;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +19,7 @@ class EditActivity extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $data['updated_by'] = auth()->id();
+        $data['updated_by'] = Filament::auth()->id();
 
         if (($data['status'] ?? null) === 'published') {
             if (empty($data['published_at'])) {

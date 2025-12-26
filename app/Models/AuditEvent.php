@@ -9,7 +9,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AuditEvent extends Model
 {
@@ -36,9 +36,9 @@ class AuditEvent extends Model
         ];
     }
 
-    public function actor(): BelongsTo
+    public function actor(): MorphTo
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        return $this->morphTo(__FUNCTION__, 'actor_type', 'actor_id');
     }
 }
 

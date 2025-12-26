@@ -39,28 +39,28 @@ class ActivityResource extends Resource
 
     public static function canViewAny(): bool
     {
-        $user = auth()->user();
+        $user = Filament::auth()->user();
 
         return $user?->canAccessPanel(Filament::getCurrentOrDefaultPanel()) ?? false;
     }
 
     public static function canCreate(): bool
     {
-        $user = auth()->user();
+        $user = Filament::auth()->user();
 
         return ($user?->isAdmin() ?? false) || ($user?->isOperator() ?? false);
     }
 
     public static function canEdit($record): bool
     {
-        $user = auth()->user();
+        $user = Filament::auth()->user();
 
         return ($user?->isAdmin() ?? false) || ($user?->isOperator() ?? false);
     }
 
     public static function canDelete($record): bool
     {
-        $user = auth()->user();
+        $user = Filament::auth()->user();
 
         return ($user?->isAdmin() ?? false) || ($user?->isOperator() ?? false);
     }
@@ -137,7 +137,7 @@ class ActivityResource extends Resource
                     ->maxItems(10)
                     ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                         $data['disk'] = 'public';
-                        $data['created_by'] = auth()->id();
+                        $data['created_by'] = Filament::auth()->id();
                         $data['created_at'] = now();
 
                         /** @var FilesystemAdapter $disk */
@@ -183,7 +183,7 @@ class ActivityResource extends Resource
                         $record->forceFill([
                             'status' => 'published',
                             'published_at' => $record->published_at ?? now(),
-                            'updated_by' => auth()->id(),
+                            'updated_by' => Filament::auth()->id(),
                         ])->save();
 
                         Notification::make()
@@ -200,7 +200,7 @@ class ActivityResource extends Resource
                         $record->forceFill([
                             'status' => 'draft',
                             'published_at' => null,
-                            'updated_by' => auth()->id(),
+                            'updated_by' => Filament::auth()->id(),
                         ])->save();
 
                         Notification::make()
@@ -216,7 +216,7 @@ class ActivityResource extends Resource
                     ->action(function (Activity $record): void {
                         $record->forceFill([
                             'status' => 'archived',
-                            'updated_by' => auth()->id(),
+                            'updated_by' => Filament::auth()->id(),
                         ])->save();
 
                         Notification::make()

@@ -34,14 +34,14 @@ class BookingResource extends Resource
 
     public static function canViewAny(): bool
     {
-        $user = auth()->user();
+        $user = Filament::auth()->user();
 
         return $user?->canAccessPanel(Filament::getCurrentOrDefaultPanel()) ?? false;
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return Filament::auth()->user()?->isAdmin() ?? false;
     }
 
     public static function form(Schema $schema): Schema
@@ -84,13 +84,13 @@ class BookingResource extends Resource
             ])
             ->actions([
                 EditAction::make()
-                    ->visible(fn () => auth()->user()?->isAdmin() ?? false),
+                    ->visible(fn () => Filament::auth()->user()?->isAdmin() ?? false),
 
                 Action::make('cancel')
                     ->label('代取消')
                     ->color('danger')
                     ->icon('heroicon-o-x-mark')
-                    ->visible(fn (Booking $record) => (auth()->user()?->isAdmin() ?? false) && $record->status === 'active')
+                    ->visible(fn (Booking $record) => (Filament::auth()->user()?->isAdmin() ?? false) && $record->status === 'active')
                     ->form([
                         Textarea::make('reason')
                             ->label('原因（审计用）')
@@ -103,7 +103,7 @@ class BookingResource extends Resource
 
                         try {
                             $service->cancelBooking(
-                                actor: auth()->user(),
+                                actor: Filament::auth()->user(),
                                 bookingId: (int) $record->id,
                                 reason: $data['reason'] ?? null,
                                 requestId: request()?->header('X-Request-Id'),

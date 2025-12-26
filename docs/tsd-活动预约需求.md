@@ -29,37 +29,56 @@
 
 ### 2. 核心接口定义 (API / Service Contracts)
 
-> 说明：项目当前为 Laravel 12 + Filament ^4.0，默认认证 guard 为 `web`（session）。后台入口路径为 `/admin`（Filament Panel），已启用后台登录页。\n\
-> 前台可采用传统 Blade 表单提交（CSRF）或补充 REST API（同样受 session/CSRF 保护）。本节以“HTTP 契约”描述外部可观测行为，不绑定具体实现方式。\n\
-> “待确认”项将显式标注。
+> 说明：项目当前为 Laravel 12 + Filament ^4.0。\n\
+> 认证与会话采用 **双 guard + 双账户体系**：\n\
+> - **前台用户**：`web` guard（session），模型 `App\\Models\\User`，表 `users`。\n\
+> - **后台管理员**：`admin` guard（session），模型 `App\\Models\\Admin`，表 `admins`，后台入口路径为 `/admin`（Filament Panel）。\n\
+> 当前版本前台主要为 **Blade 表单提交 + 重定向**（CSRF 保护），暂未对外提供 `/api/*` 形态的公开 REST API。\n\
+> 本节以“HTTP 契约”描述外部可观测行为，**并标注与现状一致的实现细节**；“待确认/未实现”项将显式标注。
+
+#### 2.0 当前实现对照（以代码为准）
+
+- **已实现（前台）**：
+  - 活动列表：`GET /activities`（支持 `q/from/to` 过滤 + 分页），仅展示 **已发布、已到发布时间、且未开始** 的活动。
+  - 活动详情：`GET /activities/{activity}`（仅对外可见活动可访问），展示图片与“立即预约”按钮（不可预约时显示禁用原因）。
+  - 用户注册/登录/登出：`GET/POST /register`、`GET/POST /login`、`POST /logout`；登录具备基础限流（10 次/分钟/邮箱+IP）。
+  - 我的预约：`GET /me/bookings`；取消预约：`POST /bookings/{booking}/cancel`（**活动开始前 < 60 分钟 或 已开始** 时禁止取消）。
+  - 个人资料：`GET /me/profile`、`POST /me/profile`（仅支持更新 `name`）。
+- **已实现（后台 Filament /admin）**：
+  - 活动管理：草稿/发布/下架/归档、容量校验（不可小于已预约人数）、图片上传（类型/大小/数量限制）。
+  - 预约管理：查询/筛选、**后台代预约（仅 admin）**、**后台代取消（仅 admin）**。
+  - 管理员管理：创建/编辑/删除（仅 admin；禁止删除自己/最后一个启用的 admin）。
+- **已实现（审计）**：
+  - 预约创建/取消与后台代操作会写入 `audit_events`（`booking_created`/`booking_cancelled`/`admin_booking_created_on_behalf`/`admin_booking_cancelled_on_behalf`）。
+- **未实现/待补充**（文档仍保留为目标态）：
+  - `/api/*` 公共 API 版本；个人资料更新审计；活动发布/下架/归档/图片增删的审计事件；更细粒度 RBAC（目前为 `admin/operator` 最小角色）。
 
 #### 2.1 认证与会话（前台）
 
 ##### Auth.Register（用户注册）
 - **接口名称与职责**：创建用户账号并建立会话。
-- **建议入口**：`POST /register`（或 `POST /api/auth/register`）
-- **输入参数**
+- **入口（已实现）**：`POST /register`
+- **输入参数（已实现）**
   - `name`: string, 必填, 长度 1..255
   - `email`: string, 必填, email 格式, 唯一
-  - `password`: string, 必填, 最小长度（待确认）
-- **输出结构**
-  - **成功**：302/200（视前端形态），返回用户基本信息（不含敏感字段），并设置 session
-  - **可预期失败**：`VALIDATION_FAILED`（字段校验失败/邮箱已存在）
-  - **不可恢复错误**：`INTERNAL_ERROR`
+-  - `password`: string, 必填, 最小长度 **8**
+- **输出结构（已实现为 Blade 重定向）**
+  - **成功**：302，登录并 `session()->regenerate()`，重定向至 `GET /activities`
+  - **可预期失败**：302 + session errors（字段校验失败/邮箱已存在）
 - **调用方/被调用方**：前台页面/客户端 → Laravel Web 层
 - **幂等性与副作用**：非幂等（会创建账号）；对同一邮箱重复注册会返回可预期失败
 - **失败时责任归属**：服务端负责保证唯一性与密码安全；客户端负责呈现校验错误
 
 ##### Auth.Login（用户登录）
-- **建议入口**：`POST /login`（或 `POST /api/auth/login`）
+- **入口（已实现）**：`POST /login`
 - **输入参数**：`email`, `password`
-- **输出结构**：成功建立 session；失败返回 `AUTH_INVALID_CREDENTIALS`（不泄漏是否存在该邮箱）
-- **幂等性**：幂等（多次登录覆盖/刷新 session）
-- **安全要求**：登录尝试应限流（见第 8、9 节）
+- **输出结构（已实现为 Blade 重定向）**：成功建立 session 并 `session()->regenerate()`；失败以表单校验错误形式返回（不区分“邮箱不存在/密码错误”）。
+- **幂等性**：幂等（多次登录刷新 session）
+- **安全要求（已实现）**：按 `email + IP` 维度限流：**1 分钟内最多 10 次尝试**，超过后提示“登录尝试过于频繁，请稍后再试。”
 
 ##### Auth.Logout（用户登出）
-- **建议入口**：`POST /logout`
-- **副作用**：销毁/轮换 session
+- **入口（已实现）**：`POST /logout`
+- **副作用（已实现）**：`Auth::logout()` + `session()->invalidate()` + `regenerateToken()`
 
 > 本期明确：**不引入邮箱验证**作为预约前置条件（`email_verified_at` 不参与业务校验）。
 
@@ -67,42 +86,42 @@
 
 ##### Activity.List（活动列表）
 - **接口名称与职责**：按条件返回可预约的活动列表（仅对外发布）。
-- **建议入口**：`GET /activities`（页面）或 `GET /api/activities`
+- **入口（已实现）**：`GET /activities`（页面）
 - **输入参数（Query）**
   - `q`: string, 可选（标题/摘要模糊查询）
   - `from`: datetime, 可选（开始时间下界）
   - `to`: datetime, 可选（开始时间上界）
   - `page`, `perPage`: int, 可选（分页）
-- **输出结构（示例字段，不绑定实现）**
+- **输出结构（已实现为 Blade 页面渲染）**
   - `items[]`: `{ id, title, startsAt, endsAt, timezone, location?, coverImageUrl?, remainingCapacity, status }`
   - `pageInfo`: `{ page, perPage, total }`
 - **幂等性**：幂等；无副作用
-- **失败责任**：服务端保证只返回可见状态（发布态）的活动；客户端负责分页与展示
+- **失败责任（现状）**：服务端保证只返回“可见且未开始”的活动；页面负责分页与展示
+
+> 现状补充（与目标态一致性说明）：当前列表额外约束 `starts_at > now()`，因此**已发布但已开始/已结束的活动不会出现在前台列表**（即便仍为 published）。
 
 ##### Activity.Get（活动详情）
-- **建议入口**：`GET /activities/{activityId}` 或 `GET /api/activities/{activityId}`
-- **输出**：包含活动详情、图片列表、可预约状态（含剩余名额）
+- **入口（已实现）**：`GET /activities/{activityId}`
+- **输出（已实现）**：活动详情页（含图片列表、剩余名额、可预约按钮及禁用原因）。当活动不可见（非 published 或未到 published_at）时返回 404。
 
 #### 2.3 预约（个人中心/前台）
 
 ##### Booking.Create（创建预约）
 - **接口名称与职责**：为已登录用户创建某活动的预约，并占用名额。
-- **建议入口**：`POST /activities/{activityId}/bookings` 或 `POST /api/activities/{activityId}/bookings`
-- **输入参数**
-  - `idempotencyKey`: string, 可选但强烈建议（用于客户端重试去重）
+- **入口（已实现）**：`POST /activities/{activityId}/bookings`
+- **输入参数（已实现）**
+  - `idempotencyKey`: string, 可选（服务端支持；当前前台页面未显式提交该字段）
   - 其他扩展字段（如备注/报名信息）：待确认（若无则 Out of Scope）
-- **输出结构**
-  - **成功**：`{ bookingId, activityId, userId, status, bookedAt }`
-  - **可预期失败**
-    - `AUTH_REQUIRED`：未登录
+- **输出结构（已实现为 Blade 重定向）**
+  - **成功**：302，重定向到 `GET /me/bookings` 并写入 success flash
+  - **可预期失败（以表单错误呈现）**
     - `ACTIVITY_NOT_FOUND`：活动不存在或不可见
-    - `ACTIVITY_NOT_BOOKABLE`：未发布/已结束/未到开放时间（开放窗口待确认）/已开始（`now >= starts_at` 时禁止预约）
-    - `CAPACITY_EXHAUSTED`：名额不足（并发条件下可频繁出现）
-    - `DUPLICATE_BOOKING`：同一用户重复预约同一活动（由唯一约束保障）
-    - `IDEMPOTENCY_REPLAY`：同 `idempotencyKey` 重放返回同结果（见第 6 节）
-  - **不可恢复错误**：`INTERNAL_ERROR`
-- **幂等性与副作用**
-  - 若启用 `idempotencyKey`：对同一用户+活动+key 视为幂等（重试返回同 booking）
+    - `ACTIVITY_NOT_BOOKABLE`：未发布/未到发布时间/已开始（`now >= starts_at`）
+    - `CAPACITY_EXHAUSTED`：名额不足
+    - `DUPLICATE_BOOKING`：同一用户重复预约同一活动（唯一约束保障）
+- **幂等性与副作用（已实现）**
+  - 唯一约束 `unique(activity_id, user_id)` 保证不会产生重复预约
+  - 当提供 `idempotencyKey` 且数据库中已有同一活动+用户且 `idempotency_key` 相同的记录时，服务端会直接返回该记录（等价于幂等重放成功）；若 key 不同则返回 `DUPLICATE_BOOKING`
   - 副作用：名额占用、产生预约记录、产生审计事件
 - **失败时责任归属**
   - 服务端：保证不超卖、不产生重复预约、不泄漏内部异常细节
@@ -110,29 +129,28 @@
 
 ##### Booking.Cancel（取消预约）
 - **接口名称与职责**：用户取消自己的预约，并释放名额（若规则允许）。
-- **建议入口**：`POST /bookings/{bookingId}/cancel` 或 `DELETE /api/bookings/{bookingId}`
-- **输入参数**
-  - `reason`: string, 可选（用于审计；长度与枚举待确认）
-- **输出结构**
-  - **成功**：`{ bookingId, status: "cancelled", cancelledAt }`
-  - **可预期失败**
-    - `AUTH_REQUIRED`：未登录
+- **入口（已实现）**：`POST /bookings/{bookingId}/cancel`
+- **输入参数（已实现）**
+  - `reason`: string, 可选（用于审计；最大长度 500）
+- **输出结构（已实现为 Blade 重定向）**
+  - **成功**：302 back 并写入 success flash
+  - **可预期失败（以表单错误呈现）**
     - `BOOKING_NOT_FOUND`：不存在
     - `FORBIDDEN`：非本人预约
-    - `CANCEL_DEADLINE_PASSED`：超过取消截止（**距离活动开始 < 1 小时禁止取消；活动开始后禁止取消**）
-    - `ALREADY_CANCELLED`：重复取消（应幂等化返回成功态）
-- **副作用**：释放名额、记录审计事件
+    - `CANCEL_DEADLINE_PASSED`：超过取消截止（**距离活动开始 < 60 分钟或已开始**）
+- **副作用（已实现）**：释放名额、记录审计事件
 
 ##### Booking.ListMine（我的预约列表）
-- **建议入口**：`GET /me/bookings` 或 `GET /api/me/bookings`
-- **输出**：分页返回用户预约记录（含活动快照字段或关联活动摘要）
+- **入口（已实现）**：`GET /me/bookings`
+- **输出（已实现为 Blade 页面渲染）**：分页返回用户预约记录（加载关联活动；同时 bookings 中保留 `activity_snapshot` 作为审计/历史快照）
 
 #### 2.4 个人资料（个人中心）
 
 ##### Profile.Get / Profile.Update
-- **建议入口**：`GET /me` / `PATCH /me`
-- **输入**：`name`（以及后续扩展字段，待确认）
-- **安全**：仅允许本人更新；变更需记录审计（至少记录变更时间与操作者）
+- **入口（已实现）**：`GET /me/profile` / `POST /me/profile`
+- **输入（已实现）**：`name`
+- **安全（已实现）**：仅允许本人更新（路由受 `auth` 中间件保护）
+- **审计（未实现）**：个人资料更新目前不写 `audit_events`，如需合规追溯可在后续补充 `profile_updated` 事件
 
 #### 2.5 后台（Filament 管理面）
 
@@ -146,25 +164,27 @@
   - 活动必须为 `published` 才可在前台列表/详情可见与可预约。
   - “发布生效时间”以 `published_at` 为准：仅当 `now >= published_at` 时才允许前台预约（且仍需满足其他可预约校验，如 `now < starts_at`）。
   - 下架（`unpublished`）后：前台不可见且不可新预约；已有预约仍可查询（取消规则不变）。
+  - 归档（`archived`）后：前台不可见且不可新预约；已有预约仍可查询（取消规则不变）。
 - **新增（Create）**
   - 默认创建为 `draft`；`published_at` 为空；不得对外可见。
   - 必填字段：`title`, `starts_at`, `timezone`, `capacity`（其余按产品确认）。
 - **编辑（Update）**
   - `draft`：允许修改全部字段（含时间/容量）。
   - `published`：允许修改非破坏性字段（标题/描述/地点/图片等）；对“时间/容量”修改需明确规则：
-    - 增加容量：允许（需记录审计）。
-    - 减少容量：不得小于当前有效预约数（否则拒绝并提示 `CAPACITY_CONSTRAINT_VIOLATION`）。
-    - 修改 `starts_at`：将影响取消截止与可预约校验，必须记录审计；若修改到 `now <= starts_at` 的过去区间需明确是否允许（待确认）。
+    - 增加容量：允许（现状：允许；**未对该变更写入审计事件**）。
+    - 减少容量：不得小于当前有效预约数（否则拒绝并提示 `CAPACITY_CONSTRAINT_VIOLATION`；现状：在后台编辑页会校验 `capacity >= booked_count`）。
+    - 修改 `starts_at`：将影响取消截止与可预约校验（现状：允许；**未对该变更写入审计事件**）。
 - **删除（Delete）与归档（Archive）**
   - 本期建议：**不做物理删除**（尤其是已有预约的活动），以“归档/下架”替代删除，避免审计缺失与历史不可追溯。
   - 若必须支持删除：
     - 无预约：允许删除（同时清理图片与关联记录）。
-    - 有预约：默认禁止删除（或仅允许超级管理员执行带强审计的“强制删除”，但本期不引入）。
+    - 有预约：默认禁止删除（当前实现：当活动存在任意 booking 时，“删除”按钮不显示）。
   - 归档：仅影响前台可见性与后台筛选，不删除历史数据。
 
 ##### Admin.BookingManagement（预约管理）
 - **职责**：查询预约、按活动查看预约名单、（可选）后台代用户取消/标记异常。
 - **明确**：允许后台**代预约**与**代取消**（仅限授权角色/权限）。所有代操作必须记录审计事件（包含被代操作的 `user_id`、操作者 `actor_id`、操作原因与请求关联 ID）。
+  - **现状实现**：后台“代预约/代取消”仅 `admin` 角色可用；`operator` 仅可查看与编辑活动，不可创建预约/代取消。
 - **契约补充（后台能力）**
   - 代预约：操作者为某 `user_id` 创建某 `activity_id` 的预约（与前台同等并发/幂等/名额约束）
   - 代取消：操作者为某 `user_id` 取消其 `booking_id`（仍受“取消截止规则”约束，除非另行定义“强制取消”能力；本期不引入强制取消）
@@ -172,6 +192,7 @@
 ##### Admin.MediaUpload（活动图片上传）
 - **职责**：上传活动图片至本地 `public` disk，绑定到活动。
 - **约束**：默认限制为 **jpg/png/webp**；**单张 ≤ 5MB**；**每活动 ≤ 10 张**；命名策略、清理策略（见第 8 节）。
+  - **现状实现**：存储目录为 `public/activity-images`；上传后会记录 `mime_type`、`size_bytes`；支持图片裁剪（Filament image editor）。
 
 ---
 
@@ -184,10 +205,11 @@
 - **`activities`**：活动主表（发布态、时间、容量、可见性）。
 - **`activity_images`**（可选，若仅封面可合并到 `activities`）：活动图片元数据与存储引用。
 - **`bookings`**：预约表（用户与活动的关系 + 状态流转）。
-- **`audit_events`**（建议）：业务审计事件表（可选；也可先用结构化日志替代，见第 9 节）。
-- **RBAC（待确认实现）**
-  - 方案 A（建议）：引入成熟 RBAC 组件（例如 Spatie Permission）形成 `roles/permissions` 等表
-  - 方案 B：自定义最小角色表 `roles` + `user_roles`（后续再演进到权限）
+- **`audit_events`**（已实现）：业务审计事件表（当前用于记录预约创建/取消与后台代操作；活动相关审计仍待补充，见第 9 节）。
+- **RBAC（现状 + 演进方向）**
+  - 现状：后台管理员表 `admins` 以 `role=admin/operator` 实现最小 RBAC；未引入 permissions 表
+  - 方案 A（建议演进）：引入成熟 RBAC 组件（例如 Spatie Permission）形成 `roles/permissions` 等表
+  - 方案 B（备选演进）：自定义最小角色表 `roles` + `user_roles`（后续再演进到权限）
 
 #### 3.2 `activities`（活动）
 - **主键**：`id`（bigint）
@@ -203,7 +225,7 @@
   - `booked_count`：int, not null（默认 0，用于快速读取剩余名额；见并发策略）
   - `status`：enum/string, not null（建议：`draft`/`published`/`archived`）
   - `published_at`：datetime, null
-  - `created_by` / `updated_by`：foreignId, null（用于审计，待确认是否需要）
+  - `created_by` / `updated_by`：bigint, null（用于记录后台操作者；现状：后台写入 `admin.id`，但不强制外键约束）
   - `created_at` / `updated_at`
 - **索引建议**
   - `(status, starts_at)`：用于列表与过滤
@@ -221,7 +243,7 @@
   - `size_bytes`：bigint, not null
   - `checksum`：string, null（用于去重/完整性校验，可选）
   - `sort_order`：int, not null（用于多图排序）
-  - `created_by`：foreignId, null
+  - `created_by`：bigint, null（用于记录后台上传操作者；现状：写入 `admin.id`，不强制外键约束）
   - `created_at`
 - **索引**
   - `(activity_id, sort_order)`
@@ -243,7 +265,7 @@
   - `created_at` / `updated_at`
 - **唯一约束（关键）**
   - `unique(activity_id, user_id)`：禁止同一用户重复预约同一活动（满足“重复点击/重放”安全底线）。
-  - 若启用幂等键：`unique(user_id, idempotency_key)` 或 `unique(activity_id, user_id, idempotency_key)`（二选一，需与客户端策略一致；待确认）。
+  - 幂等键：现状同时存在 `unique(activity_id, user_id, idempotency_key)`（但由于已存在 `unique(activity_id, user_id)`，该约束更多用于表达意图；是否保留/调整为 `unique(user_id, idempotency_key)` 可在后续明确）。
 - **查询模式预期**
   - 用户个人中心：按 `user_id` + `status` + `booked_at desc`
   - 后台：按 `activity_id` + `status` + `booked_at desc`
@@ -396,10 +418,13 @@ end
 - **前台认证**：使用 Laravel `web` session（已存在），所有写操作要求已登录。
 - **后台认证**：Filament `/admin` 使用其登录流程（已配置），并通过 `Authenticate` 中间件保护。
 - **授权（RBAC）**
-  - 最小角色建议：`admin`（管理员）、`operator`（运营）。
-  - 权限粒度建议：活动管理、预约管理、用户管理、媒体管理分离。
-  - **待确认**：RBAC 采用何种实现（推荐引入成熟权限组件；否则自研角色表需明确可审计变更流程）。
-  - **已定案补充**：后台“代预约/代取消”为高风险能力，必须作为独立权限点（例如 `bookings.act_as_user`），默认仅授予 `admin`，并要求强审计（见 8.3、9.1）。
+  - **现状实现（最小角色）**：`admins.role` = `admin` / `operator`，并带 `admins.is_active`（禁用账号不可登录后台）。
+  - **权限粒度（现状）**
+    - 活动管理：`admin`/`operator` 可创建/编辑/发布/下架/归档/删除（删除仅限无预约的活动）。
+    - 预约管理：`admin` 可代预约/代取消；`operator` 仅可查看预约列表（无创建、无代取消）。
+    - 管理员管理：仅 `admin` 可管理管理员账号。
+  - **待确认/演进**：暂未引入细粒度 permissions（如 Spatie Permission）；如未来需要，可将上述能力拆分为权限点并记录权限变更审计。
+  - **已定案补充**：后台“代预约/代取消”为高风险能力，现状默认仅授予 `admin`，并写入强审计（见 8.3、9.1）。
 
 #### 8.2 敏感数据处理原则
 - 密码仅存哈希（当前 `users.password` 已为 hashed cast）。
@@ -408,6 +433,7 @@ end
 #### 8.3 日志与审计要求（可追溯性）
 - 必须可追溯：活动发布/下架、容量变更、图片上传/删除、预约创建/取消、后台代操作（若允许）。
 - 审计事件应包含：`event_type`、`occurred_at`、`actor_type`（user/admin）、`actor_id`、`target_type`、`target_id`、`metadata`（最小必要）。
+  - 现状补充：由于 `actor_type` 可能为 user/admin，`audit_events.actor_id` **不强制外键约束**（避免固定指向 `users` 或 `admins`）。
   - 对“代操作”，`metadata` 必须额外包含：`impersonated_user_id`（被代操作用户）、`reason`（原因）、`request_id/trace_id`（关联 ID），以满足责任追溯。
 
 #### 8.4 第三方依赖信任假设
@@ -423,11 +449,13 @@ end
 ### 9. 日志、监控与可观测性 (Observability)
 
 #### 9.1 关键业务事件记录（结构化）
-- `activity_created` / `activity_updated` / `activity_published` / `activity_unpublished`
-- `activity_image_uploaded` / `activity_image_deleted`
-- `booking_created` / `booking_cancelled`
-- `admin_booking_created_on_behalf` / `admin_booking_cancelled_on_behalf`（包含 `impersonated_user_id`）
-- `auth_login_success` / `auth_login_failed`（失败原因不可区分到“账号不存在”）
+- **已实现**
+  - `booking_created` / `booking_cancelled`
+  - `admin_booking_created_on_behalf` / `admin_booking_cancelled_on_behalf`（包含 `impersonated_user_id` 与 `reason`）
+- **未实现（规划保留）**
+  - `activity_created` / `activity_updated` / `activity_published` / `activity_unpublished` / `activity_archived`
+  - `activity_image_uploaded` / `activity_image_deleted`
+  - `auth_login_success` / `auth_login_failed`（当前前台登录限流已实现，但未写入 `audit_events`）
 
 #### 9.2 指标（Metrics）建议
 - **业务指标**
@@ -460,16 +488,16 @@ end
 
 #### 10.2 活动可见性与预约正确性
 - Given 活动状态为 `draft`，When 前台请求列表/详情，Then 不可见。
-- Given 活动状态为 `published` 但 `now < published_at`，When 前台请求列表/详情或点击预约，Then 不可见或不可预约（按实现选择其一，但必须一致）。
+- Given 活动状态为 `published` 但 `now < published_at`，When 前台请求列表/详情或点击预约，Then **不可见**（当前实现：列表/详情均以 `published_at <= now` 作为可见性前置条件）。
 - Given 活动状态为 `published` 且名额 > 0，When 用户预约，Then 预约成功且剩余名额减少 1。
 - Given 活动名额已满，When 任意用户预约，Then 返回 `CAPACITY_EXHAUSTED`，且不得出现超卖。
 - Given 同一用户对同一活动重复点击预约，When 发生重复请求，Then 返回 `DUPLICATE_BOOKING` 或通过幂等键返回同一成功结果（按设计一致）。
 
 #### 10.6 后台活动管理 CRUD（补充）
 - Given 运营/管理员在后台创建活动，When 保存但未发布，Then 活动为 `draft` 且前台不可见、不可预约。
-- Given 管理员在后台发布活动并设置 `published_at`，When `now < published_at`，Then 前台不可预约；When `now >= published_at` 且 `now < starts_at`，Then 前台可预约。
-- Given 活动已发布且存在有效预约，When 管理员尝试将 `capacity` 调整到小于有效预约数，Then 操作失败并提示容量约束错误，且审计记录写入“修改失败原因”（最小必要）。
-- Given 活动存在预约，When 管理员尝试删除活动，Then 默认被拒绝并记录审计（建议用归档替代删除）。
+- Given 管理员在后台发布活动并设置 `published_at`，When `now < published_at`，Then 前台不可见（因此不可预约）；When `now >= published_at` 且 `now < starts_at`，Then 前台可预约。
+- Given 活动已发布且存在有效预约，When 管理员尝试将 `capacity` 调整到小于有效预约数，Then 操作失败并提示容量约束错误（现状：**不写审计事件**）。
+- Given 活动存在预约，When 管理员尝试删除活动，Then 默认不允许删除（现状：**UI 不提供删除入口**；且不写审计事件；建议用归档替代删除）。
 
 #### 10.3 取消与一致性
 - Given 用户存在 `active` 预约，When 在**活动开始前 >= 1 小时**发起取消，Then 预约状态变为 `cancelled` 且剩余名额增加 1。
