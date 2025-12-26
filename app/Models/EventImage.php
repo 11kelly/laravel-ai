@@ -35,7 +35,8 @@ class EventImage extends Model
     /**
      * Get full image URL
      */
-    public function getFullUrlAttribute(): s
+    public function getFullUrlAttribute(): string
+    {
         if (Str::startsWith($this->image_url, ['http://', 'https://'])) {
             return $this->image_url;
         }
