@@ -114,7 +114,7 @@ class BookingResource extends Resource
                     ->action(function (Booking $record) {
                         try {
                             $record->update([
-                                'status' => 'confirmed',
+                                'status' => BookingStatus::CONFIRMED,
                                 'approved_by' => auth()->id(),
                                 'approved_at' => now(),
                             ]);
@@ -131,7 +131,7 @@ class BookingResource extends Resource
                                 ->send();
                         }
                     })
-                    ->visible(fn (Booking $record) => $record->status === 'pending'),
+                    ->visible(fn (Booking $record) => $record->status === BookingStatus::PENDING),
                 
                 // Reject pending booking
                 Actions\Action::make('reject')
@@ -148,7 +148,7 @@ class BookingResource extends Resource
                     ->action(function (Booking $record, array $data) {
                         try {
                             $service = app(BookingCancellationService::class);
-                            $service->cancelBooking($record, 'admin', $data['reason']);
+                            $service->cancelBooking($record, auth()->user(), $data['reason']);
 
                             Notification::make()
                                 ->title('Booking rejected successfully')
@@ -162,7 +162,7 @@ class BookingResource extends Resource
                                 ->send();
                         }
                     })
-                    ->visible(fn (Booking $record) => $record->status === 'pending'),
+                    ->visible(fn (Booking $record) => $record->status === BookingStatus::PENDING),
                 
                 // Cancel confirmed booking
                 Actions\Action::make('cancel')
@@ -179,7 +179,7 @@ class BookingResource extends Resource
                     ->action(function (Booking $record, array $data) {
                         try {
                             $service = app(BookingCancellationService::class);
-                            $service->cancelBooking($record, 'admin', $data['reason']);
+                            $service->cancelBooking($record, auth()->user(), $data['reason']);
 
                             Notification::make()
                                 ->title('Booking cancelled successfully')
@@ -193,7 +193,7 @@ class BookingResource extends Resource
                                 ->send();
                         }
                     })
-                    ->visible(fn (Booking $record) => $record->status === 'confirmed'),
+                    ->visible(fn (Booking $record) => $record->status === BookingStatus::CONFIRMED),
             ])
             ->bulkActions([
                 Actions\BulkActionGroup::make([

@@ -125,6 +125,7 @@ class EventResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image')
+                    ->getStateUsing(fn ($record) => $record->cover_image_url)
                     ->url(fn ($record) => $record->cover_image_url)
                     ->square(),
                 Tables\Columns\TextColumn::make('title')

@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('活动列表') }}
+            {{ __('messages.Event List') }}
         </h2>
     </x-slot>
 
@@ -16,7 +16,7 @@
                                 type="text" 
                                 name="search" 
                                 value="{{ request('search') }}"
-                                placeholder="搜索活动标题或描述..."
+                                placeholder="{{ __('messages.Search events by title or description...') }}"
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                             >
                         </div>
@@ -25,7 +25,7 @@
                                 name="category" 
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                             >
-                                <option value="">所有分类</option>
+                                <option value="">{{ __('messages.All Categories') }}</option>
                                 @foreach($categories as $category)
                                     <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>
                                         {{ $category->name }}
@@ -35,10 +35,10 @@
                         </div>
                         <div class="flex gap-2">
                             <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-                                搜索
+                                {{ __('messages.Search') }}
                             </button>
                             <a href="{{ route('frontend.events.index') }}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
-                                重置
+                                {{ __('messages.Reset') }}
                             </a>
                         </div>
                     </form>
@@ -107,7 +107,7 @@
                                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                             </svg>
-                                            名额: {{ $event->max_participants }}
+                                            {{ __('messages.Participant Limit') }}: {{ $event->max_participants }}
                                         </div>
                                     @endif
                                 </div>
@@ -117,7 +117,7 @@
                                     href="{{ route('frontend.events.show', $event) }}" 
                                     class="block w-full text-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
                                 >
-                                    查看详情
+                                    {{ __('messages.View Details') }}
                                 </a>
                             </div>
                         </div>
@@ -134,7 +134,7 @@
                         <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
                         </svg>
-                        <p class="text-lg">暂无活动</p>
+                        <p class="text-lg">{{ __('messages.No events available') }}</p>
                     </div>
                 </div>
             @endif

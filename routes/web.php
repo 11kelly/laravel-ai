@@ -60,4 +60,9 @@ Route::middleware(['auth', 'frontend.user'])->group(function () {
     });
 });
 
+// Language switching
+Route::get('/locale/{locale}', [\App\Http\Controllers\LocaleController::class, 'switch'])
+    ->name('locale.switch')
+    ->where('locale', 'en|zh_CN');
+
 require __DIR__.'/auth.php';

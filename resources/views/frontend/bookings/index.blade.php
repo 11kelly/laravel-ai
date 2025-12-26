@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('我的预约') }}
+            {{ __('messages.My Bookings') }}
         </h2>
     </x-slot>
 
@@ -60,18 +60,18 @@
                                             </div>
                                             
                                             <!-- Status Badge -->
-                                            <span class="inline-block px-3 py-1 text-sm font-semibold rounded
-                                                @if($booking->status === 'pending') bg-yellow-100 text-yellow-800
-                                                @elseif($booking->status === 'confirmed') bg-green-100 text-green-800
-                                                @elseif($booking->status === 'cancelled') bg-red-100 text-red-800
-                                                @elseif($booking->status === 'completed') bg-blue-100 text-blue-800
-                                                @endif
-                                            ">
-                                                @if($booking->status === 'pending') 待审批
-                                                @elseif($booking->status === 'confirmed') 已确认
-                                                @elseif($booking->status === 'cancelled') 已取消
-                                                @elseif($booking->status === 'completed') 已完成
-                                                @endif
+                                            @php
+                                                $status = $booking->status;
+                                                $statusColors = [
+                                                    'pending' => 'bg-yellow-100 text-yellow-800',
+                                                    'confirmed' => 'bg-green-100 text-green-800',
+                                                    'cancelled' => 'bg-red-100 text-red-800',
+                                                    'completed' => 'bg-blue-100 text-blue-800',
+                                                ];
+                                                $colorClass = $statusColors[$status->value] ?? 'bg-gray-100 text-gray-800';
+                                            @endphp
+                                            <span class="inline-block px-3 py-1 text-sm font-semibold rounded {{ $colorClass }}">
+                                                {{ $status->label() }}
                                             </span>
                                         </div>
 
@@ -80,7 +80,7 @@
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                                 </svg>
-                                                活动时间：{{ $booking->event->start_time->format('Y-m-d H:i') }}
+                                                {{ __('messages.Event Time') }}：{{ $booking->event->start_time->format('Y-m-d H:i') }}
                                             </div>
                                             
                                             <div class="flex items-center">
@@ -88,37 +88,75 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                 </svg>
-                                                地点：{{ $booking->event->location }}
+                                                {{ __('messages.Location') }}：{{ $booking->event->location }}
                                             </div>
 
                                             <div class="flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                                 </svg>
-                                                预约人数：{{ $booking->participants_count }} 人
+                                                {{ __('messages.Number of Participants') }}：{{ $booking->participants_count }} {{ __('messages.people') }}
                                             </div>
 
                                             <div class="flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
-                                                预约时间：{{ $booking->created_at->format('Y-m-d H:i') }}
+                                                {{ __('messages.Booking Time') }}：{{ $booking->created_at->format('Y-m-d H:i') }}
                                             </div>
                                         </div>
 
                                         @if($booking->notes)
                                             <div class="text-sm text-gray-600 mb-4">
-                                                <strong>备注：</strong>{{ $booking->notes }}
+                                                <strong>{{ __('messages.Notes') }}：</strong>{{ $booking->notes }}
                                             </div>
                                         @endif
 
-                                        @if($booking->status === 'cancelled')
-                                            <div class="text-sm text-red-600 bg-red-50 p-3 rounded">
-                                                <strong>取消原因：</strong>
-                                                {{ $booking->cancellation_reason ?? '无' }}
+                                        @if($booking->status === \App\Enums\BookingStatus::PENDING)
+                                            <div class="text-sm text-yellow-700 bg-yellow-50 p-3 rounded mb-4">
+                                                <div class="flex items-start">
+                                                    <svg class="w-5 h-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <div>
+                                                        <strong>{{ __('messages.Pending Approval') }}</strong>
+                                                        <p class="mt-1 text-xs text-yellow-600">
+                                                            {{ __('messages.Booking Time') }}：{{ $booking->created_at->format('Y-m-d H:i') }}
+                                                        </p>
+                                                        <p class="mt-1 text-xs text-yellow-600">
+                                                            {{ __('messages.Your booking is pending admin approval') }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($booking->status === \App\Enums\BookingStatus::CONFIRMED && $booking->approved_at)
+                                            <div class="text-sm text-green-700 bg-green-50 p-3 rounded mb-4">
+                                                <div class="flex items-start">
+                                                    <svg class="w-5 h-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <div>
+                                                        <strong>{{ __('messages.Booking Confirmed') }}</strong>
+                                                        <p class="mt-1 text-xs text-green-600">
+                                                            {{ __('messages.Approved At') }}：{{ $booking->approved_at->format('Y-m-d H:i') }}
+                                                            @if($booking->approver)
+                                                                （{{ __('messages.Approved by') }}：{{ $booking->approver->name }}）
+                                                            @endif
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($booking->status === \App\Enums\BookingStatus::CANCELLED)
+                                            <div class="text-sm text-red-600 bg-red-50 p-3 rounded mb-4">
+                                                <strong>{{ __('messages.Cancellation Reason') }}：</strong>
+                                                {{ $booking->cancellation_reason ?? __('messages.None') }}
                                                 <div class="mt-1 text-xs">
-                                                    取消时间：{{ $booking->cancelled_at->format('Y-m-d H:i') }}
-                                                    （{{ $booking->cancelled_by === 'user' ? '用户取消' : '管理员取消' }}）
+                                                    {{ __('messages.Cancelled At') }}：{{ $booking->cancelled_at->format('Y-m-d H:i') }}
+                                                    （{{ $booking->cancelled_by === 'user' ? __('messages.Cancelled by User') : __('messages.Cancelled by Admin') }}）
                                                 </div>
                                             </div>
                                         @endif
@@ -129,22 +167,32 @@
                                                 href="{{ route('frontend.events.show', $booking->event) }}" 
                                                 class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
                                             >
-                                                查看活动详情
+                                                {{ __('messages.View Event Details') }}
                                             </a>
 
                                             @if($booking->canBeCancelled())
                                                 <form 
                                                     method="POST" 
                                                     action="{{ route('frontend.bookings.cancel', $booking) }}"
-                                                    onsubmit="return confirm('确定要取消预约吗？')"
                                                     class="inline"
+                                                    id="cancel-form-{{ $booking->id }}"
                                                 >
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm">
-                                                        取消预约
+                                                    <button 
+                                                        type="submit" 
+                                                        class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                                                        onclick="return confirm('{{ addslashes(__('messages.Are you sure you want to cancel this booking?')) }}')"
+                                                    >
+                                                        {{ __('messages.Cancel Booking') }}
                                                     </button>
                                                 </form>
+                                            @endif
+
+                                            @if($booking->status === \App\Enums\BookingStatus::PENDING)
+                                                <span class="px-4 py-2 bg-gray-100 text-gray-500 rounded-md text-sm cursor-not-allowed">
+                                                    {{ __('messages.Waiting for approval') }}
+                                                </span>
                                             @endif
                                         </div>
                                     </div>
@@ -164,9 +212,9 @@
                         <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <p class="text-lg mb-4">暂无预约记录</p>
+                        <p class="text-lg mb-4">{{ __('messages.No booking records') }}</p>
                         <a href="{{ route('frontend.events.index') }}" class="inline-block px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-                            浏览活动
+                            {{ __('messages.Browse Events') }}
                         </a>
                     </div>
                 </div>

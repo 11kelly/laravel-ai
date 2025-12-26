@@ -22,6 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'frontend.user' => \App\Http\Middleware\EnsureFrontendUser::class,
         ]);
+        
+        // 注册语言切换中间件到 web 中间件组
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
