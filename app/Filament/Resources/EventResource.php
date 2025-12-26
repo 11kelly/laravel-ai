@@ -130,6 +130,7 @@ class EventResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('封面')
+                    ->disk('public')
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('title')

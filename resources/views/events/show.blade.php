@@ -6,16 +6,16 @@
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
         @if($event->image)
-            <img src="{{ \Illuminate\Support\Facades\Storage::url($event->image) }}" alt="{{ $event->title }}" class="w-full h-96 object-cover">
+            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->image) }}" alt="{{ $event->title }}" class="w-full h-96 object-cover">
         @else
             <div class="w-full h-96 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                 <span class="text-gray-400 text-xl">暂无图片</span>
             </div>
         @endif
-        
+
         <div class="p-8">
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">{{ $event->title }}</h1>
-            
+
             <div class="space-y-4 mb-6">
                 <div class="flex items-center text-gray-600 dark:text-gray-400">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,7 +68,7 @@
                 @if($userBooking)
                     <div class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                         <p class="text-yellow-800 dark:text-yellow-200">
-                            您已预约此活动，状态: 
+                            您已预约此活动，状态:
                             @if($userBooking->isPending())
                                 <span class="font-semibold">待确认</span>
                             @elseif($userBooking->isConfirmed())

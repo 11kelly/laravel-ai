@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\BookingResource\Pages;
 
+use App\Exceptions\BookingException;
 use App\Filament\Resources\BookingResource;
 use App\Models\Booking;
 use App\Services\BookingService;
@@ -60,7 +61,7 @@ class EditBooking extends EditRecord
                 } elseif ($newStatus === Booking::STATUS_CANCELLED && $oldStatus !== Booking::STATUS_CANCELLED) {
                     $bookingService->cancelBooking($booking);
                 }
-            } catch (\Exception $e) {
+            } catch (BookingException $e) {
                 Notification::make()
                     ->title('状态更新失败')
                     ->body($e->getMessage())

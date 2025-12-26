@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\BookingException;
 use App\Models\Booking;
 use App\Models\Event;
 use App\Services\BookingService;
@@ -43,7 +44,7 @@ class BookingController extends Controller
             return redirect()
                 ->route('events.show', $event)
                 ->with('success', '预约成功！');
-        } catch (\Exception $e) {
+        } catch (BookingException $e) {
             return redirect()
                 ->route('events.show', $event)
                 ->with('error', $e->getMessage());
@@ -69,7 +70,7 @@ class BookingController extends Controller
             return redirect()
                 ->route('profile.bookings')
                 ->with('success', '预约已取消');
-        } catch (\Exception $e) {
+        } catch (BookingException $e) {
             return redirect()
                 ->route('profile.bookings')
                 ->with('error', $e->getMessage());

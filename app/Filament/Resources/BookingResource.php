@@ -9,10 +9,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Exceptions\BookingException;
 use App\Filament\Resources\BookingResource\Pages;
 use App\Models\Booking;
 use App\Services\BookingService;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -146,8 +148,21 @@ class BookingResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (Booking $record) => $record->isPending())
                     ->action(function (Booking $record) {
-                        $service = app(BookingService::class);
-                        $service->confirmBooking($record);
+                        try {
+                            $service = app(BookingService::class);
+                            $service->confirmBooking($record);
+
+                            Notification::make()
+                                ->title('预约已确认')
+                                ->success()
+                                ->send();
+                        } catch (BookingException $e) {
+                            Notification::make()
+                                ->title('操作失败')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
 
                 Action::make('cancel')
@@ -157,8 +172,21 @@ class BookingResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (Booking $record) => ! $record->isCancelled())
                     ->action(function (Booking $record) {
-                        $service = app(BookingService::class);
-                        $service->cancelBooking($record);
+                        try {
+                            $service = app(BookingService::class);
+                            $service->cancelBooking($record);
+
+                            Notification::make()
+                                ->title('预约已取消')
+                                ->success()
+                                ->send();
+                        } catch (BookingException $e) {
+                            Notification::make()
+                                ->title('操作失败')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
 
                 EditAction::make(),

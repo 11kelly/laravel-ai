@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">活动列表</h1>
-        
+
         <form method="GET" action="{{ route('events.index') }}" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
@@ -43,7 +43,7 @@
             @foreach($events as $event)
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     @if($event->image)
-                        <img src="{{ \Illuminate\Support\Facades\Storage::url($event->image) }}" alt="{{ $event->title }}" class="w-full h-48 object-cover">
+                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->image) }}" alt="{{ $event->title }}" class="w-full h-48 object-cover">
                     @else
                         <div class="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                             <span class="text-gray-400">暂无图片</span>

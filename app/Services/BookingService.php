@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\BookingException;
 use App\Models\Booking;
 use App\Models\Event;
 use App\Models\User;
@@ -19,7 +20,7 @@ class BookingService
     /**
      * Create a new booking.
      *
-     * @throws \Exception
+     * @throws BookingException
      */
     public function createBooking(User $user, Event $event, ?string $notes = null): Booking
     {
@@ -37,22 +38,22 @@ class BookingService
                 ->first();
 
             if ($existingBooking) {
-                throw new \Exception('您已经预约过此活动');
+                throw new BookingException('您已经预约过此活动');
             }
 
             // Check if event is published
             if (! $event->is_published) {
-                throw new \Exception('此活动尚未发布');
+                throw new BookingException('此活动尚未发布');
             }
 
             // Check if event has available slots (re-check after lock)
             if ($event->isFull()) {
-                throw new \Exception('活动名额已满');
+                throw new BookingException('活动名额已满');
             }
 
             // Check if event has started
             if ($event->start_time <= now()) {
-                throw new \Exception('活动已开始，无法预约');
+                throw new BookingException('活动已开始，无法预约');
             }
 
             // Create booking
@@ -73,7 +74,7 @@ class BookingService
     /**
      * Cancel a booking.
      *
-     * @throws \Exception
+     * @throws BookingException
      */
     public function cancelBooking(Booking $booking): bool
     {
@@ -85,7 +86,7 @@ class BookingService
 
             // Check if booking is already cancelled (re-check after lock)
             if ($booking->isCancelled()) {
-                throw new \Exception('预约已取消');
+                throw new BookingException('预约已取消');
             }
 
             // Lock the event record to prevent race conditions
@@ -95,7 +96,7 @@ class BookingService
 
             // Check if event has started
             if ($event->start_time <= now()) {
-                throw new \Exception('活动已开始，无法取消预约');
+                throw new BookingException('活动已开始，无法取消预约');
             }
 
             // Update booking status
@@ -114,7 +115,7 @@ class BookingService
     /**
      * Confirm a booking.
      *
-     * @throws \Exception
+     * @throws BookingException
      */
     public function confirmBooking(Booking $booking): bool
     {
@@ -126,7 +127,7 @@ class BookingService
 
             // Check if booking is already cancelled (re-check after lock)
             if ($booking->isCancelled()) {
-                throw new \Exception('无法确认已取消的预约');
+                throw new BookingException('无法确认已取消的预约');
             }
 
             // Update booking status
