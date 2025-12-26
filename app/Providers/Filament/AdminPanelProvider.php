@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->authGuard('admin')  // 使用独立的 admin guard
             ->colors([
                 'primary' => Color::Amber,
             ])

@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'admins',
+        ],
     ],
 
     /*
@@ -63,6 +68,12 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+        
+        // Admin provider - 只允许 role='admin' 的用户通过认证
+        'admins' => [
+            'driver' => 'admin_eloquent',
+            'model' => App\Models\User::class,
         ],
 
         // 'users' => [
